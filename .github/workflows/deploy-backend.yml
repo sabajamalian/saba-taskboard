@@ -1,0 +1,145 @@
+name: Deploy Backend Application
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
+      run_tests:
+        description: 'Run tests before deployment'
+        required: false
+        type: boolean
+        default: true
+
+# Idempotent backend deployment
+# Running this multiple times will update the application without side effects
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        if: ${{ inputs.run_tests }}
+        working-directory: ./backend
+        env:
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          pip install pytest
+          pytest tests/ -v --tb=short
+
+      - name: Prepare deployment package
+        run: |
+          # Copy frontend to backend static
+          mkdir -p backend/static
+          cp -r frontend/* backend/static/
+          
+          # Create startup script for Azure
+          cat > backend/startup.sh << 'EOF'
+          #!/bin/bash
+          cd /home/site/wwwroot
+          pip install -r requirements.txt
+          gunicorn --bind=0.0.0.0:8000 --timeout 600 "app:create_app()"
+          EOF
+          chmod +x backend/startup.sh
+          
+          # Create zip
+          cd backend
+          zip -r ../deploy-backend.zip . \
+            -x "*.pyc" \
+            -x "__pycache__/*" \
+            -x "venv/*" \
+            -x ".env" \
+            -x "*.db" \
+            -x "tests/*"
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Verify Web App exists
+        run: |
+          echo "Verifying Web App: ${{ vars.APP_NAME_PREFIX }}-api"
+          if ! az webapp show --name ${{ vars.APP_NAME_PREFIX }}-api --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} &>/dev/null; then
+            echo "❌ Web App not found. Please run 'Deploy Azure Infrastructure' workflow first."
+            exit 1
+          fi
+          echo "✅ Web App exists"
+
+      - name: Configure Web App Settings (idempotent)
+        run: |
+          az webapp config appsettings set \
+            --name ${{ vars.APP_NAME_PREFIX }}-api \
+            --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
+            --settings \
+              SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+              JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
+              GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+              GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+              DATABASE_URL="sqlite:////home/data/taskboard.db" \
+              FLASK_ENV="production" \
+              SCM_DO_BUILD_DURING_DEPLOYMENT="true" \
+            --output none
+          echo "✅ App settings configured"
+
+      - name: Configure Startup Command (idempotent)
+        run: |
+          az webapp config set \
+            --name ${{ vars.APP_NAME_PREFIX }}-api \
+            --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
+            --startup-file "startup.sh" \
+            --output none
+          echo "✅ Startup command configured"
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.APP_NAME_PREFIX }}-api
+          package: deploy-backend.zip
+
+      - name: Verify deployment
+        run: |
+          APP_URL="https://${{ vars.APP_NAME_PREFIX }}-api.azurewebsites.net"
+          echo "Waiting for deployment to complete..."
+          sleep 30
+          
+          echo ""
+          echo "═══════════════════════════════════════════════"
+          echo "  BACKEND DEPLOYMENT COMPLETE"
+          echo "═══════════════════════════════════════════════"
+          echo ""
+          echo "🔗 Application URL: $APP_URL"
+          echo "🔗 API Base: $APP_URL/api/v1"
+          echo "🔗 Health Check: $APP_URL/api/v1/health"
+          echo ""
+          
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL/api/v1/health" || echo "000")
+          if [ "$HTTP_CODE" == "200" ]; then
+            echo "✅ Health check passed (HTTP $HTTP_CODE)"
+          else
+            echo "⚠️  Health check returned HTTP $HTTP_CODE (app may still be starting)"
+          fi
+          echo ""
+          echo "═══════════════════════════════════════════════"

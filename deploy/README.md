@@ -143,13 +143,17 @@ Deploys the Telegram bot:
 
 ## CI/CD with GitHub Actions
 
-### Step 1: Copy the Workflow
+TaskBoard uses three separate, manually-triggered GitHub Actions workflows for deployment:
 
-```bash
-cp deploy/github-actions/deploy.yml .github/workflows/deploy.yml
-```
+| Workflow | Purpose | When to Use |
+|----------|---------|-------------|
+| **Deploy Azure Infrastructure** | Creates/updates Azure resources | First-time setup, or infrastructure changes |
+| **Deploy Backend Application** | Deploys Flask API + frontend | Code changes, configuration updates |
+| **Deploy Telegram Bot** | Deploys Telegram bot | Bot code changes (optional) |
 
-### Step 2: Create Azure Service Principal
+All workflows are **idempotent** — you can run them multiple times safely without creating duplicate resources.
+
+### Step 1: Create Azure Service Principal
 
 Create a service principal for GitHub Actions to authenticate with Azure:
 
@@ -170,7 +174,7 @@ az ad sp create-for-rbac \
 
 Copy the JSON output — this goes into `AZURE_CREDENTIALS` secret.
 
-### Step 3: Configure GitHub Secrets
+### Step 2: Configure GitHub Secrets
 
 Go to **Repository Settings → Secrets and variables → Actions → Secrets**
 
@@ -186,7 +190,7 @@ Create these **Repository Secrets**:
 | `JWT_SECRET_KEY` | JWT signing key | Generate: `python -c "import secrets; print(secrets.token_hex(32))"` |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token (optional) | [@BotFather](https://t.me/BotFather) on Telegram |
 
-### Step 4: Configure GitHub Variables
+### Step 3: Configure GitHub Variables
 
 Go to **Repository Settings → Secrets and variables → Actions → Variables**
 
@@ -200,7 +204,7 @@ Create these **Repository Variables**:
 | `APP_SERVICE_SKU` | App Service tier | `B1` (Basic), `S1` (Standard), `P1v2` (Premium) |
 | `DEPLOY_BOT` | Deploy Telegram bot | `true` or `false` |
 
-### Step 5: Environment-Specific Configuration (Optional)
+### Step 4: Environment-Specific Configuration (Optional)
 
 For staging/production environments with different configs:
 
@@ -212,28 +216,68 @@ Example for staging:
 - `AZURE_RESOURCE_GROUP` = `taskboard-staging-rg`
 - `APP_NAME_PREFIX` = `taskboard-staging`
 
-### Step 6: Deploy
+### Step 5: Deploy
 
-**Option A: Automatic deployment on push**
-- Push to `main` branch triggers backend deployment
+**All deployments are manual** — trigger them from the GitHub Actions UI:
 
-**Option B: Manual deployment via workflow_dispatch**
-1. Go to **Actions → Deploy TaskBoard to Azure**
-2. Click **Run workflow**
-3. Select options:
-   - ☑️ Deploy infrastructure (first time or changes)
-   - ☑️ Deploy backend
-   - ☐ Deploy bot (if using Telegram)
-   - Select environment
+1. Go to **Actions** tab in your repository
+2. Select the workflow you want to run
+3. Click **Run workflow**
+4. Select the target environment
+5. Click **Run workflow**
 
-### Deployment Workflow Options
+#### Deployment Order (First Time)
 
-| Trigger | What it does |
-|---------|--------------|
-| Push to `main` | Deploys backend only |
-| Manual + Deploy infrastructure | Creates/updates Azure resources (Bicep) |
-| Manual + Deploy backend | Deploys Flask API + frontend |
-| Manual + Deploy bot | Deploys Telegram bot + sets webhook |
+For initial setup, run workflows in this order:
+
+1. **Deploy Azure Infrastructure** → Creates resource group, App Services, storage
+2. **Deploy Backend Application** → Deploys the Flask API with frontend
+3. **Deploy Telegram Bot** (optional) → Deploys bot and sets webhook
+
+#### Deployment Order (Updates)
+
+For code updates, just run the relevant workflow:
+
+- Code changes → **Deploy Backend Application**
+- Bot changes → **Deploy Telegram Bot**
+- Infrastructure changes → **Deploy Azure Infrastructure** (then redeploy apps)
+
+### Workflow Details
+
+#### Deploy Azure Infrastructure
+
+| Option | Description |
+|--------|-------------|
+| Environment | `production` or `staging` |
+
+Creates/updates:
+- Resource Group
+- App Service Plan (Linux, Python 3.11)
+- Web App for backend API
+- Storage Account with Azure Files (for SQLite persistence)
+- (Optional) Web App for Telegram bot
+
+#### Deploy Backend Application
+
+| Option | Description |
+|--------|-------------|
+| Environment | `production` or `staging` |
+| Run tests | Run pytest before deployment (default: true) |
+
+Deploys:
+- Flask API
+- Frontend static files
+- App configuration and secrets
+
+#### Deploy Telegram Bot
+
+| Option | Description |
+|--------|-------------|
+| Environment | `production` or `staging` |
+
+Deploys:
+- Telegram bot application
+- Configures webhook automatically
 
 ### Complete Setup Checklist
 
@@ -244,29 +288,22 @@ Example for staging:
 [ ] 4. (Optional) Create Telegram bot via @BotFather
 [ ] 5. Add all GitHub Secrets
 [ ] 6. Add all GitHub Variables
-[ ] 7. Copy deploy.yml to .github/workflows/
-[ ] 8. Run workflow with "Deploy infrastructure" checked
+[ ] 7. Run "Deploy Azure Infrastructure" workflow
+[ ] 8. Run "Deploy Backend Application" workflow
 [ ] 9. Update Google OAuth redirect URI to deployed URL
-[ ] 10. Run workflow again to deploy application
+[ ] 10. (Optional) Run "Deploy Telegram Bot" workflow
 ```
 
-### First-Time Infrastructure Deployment
+### First-Time Deployment
 
-For initial setup, run the workflow manually with infrastructure deployment:
+For initial setup:
 
-1. Go to **Actions → Deploy TaskBoard to Azure**
-2. Click **Run workflow**
-3. Check ☑️ **Deploy/update Azure infrastructure**
-4. Check ☑️ **Deploy backend application**
-5. Select **production** environment
-6. Click **Run workflow**
-
-The infrastructure deployment creates:
-- Resource Group
-- App Service Plan (Linux, Python 3.11)
-- Web App for backend API
-- Storage Account with Azure Files (for SQLite persistence)
-- (Optional) Web App for Telegram bot
+1. Go to **Actions → Deploy Azure Infrastructure**
+2. Click **Run workflow**, select **production**, click **Run workflow**
+3. Wait for completion
+4. Go to **Actions → Deploy Backend Application**
+5. Click **Run workflow**, select **production**, click **Run workflow**
+6. (Optional) Go to **Actions → Deploy Telegram Bot** and run
 
 ### After Deployment
 

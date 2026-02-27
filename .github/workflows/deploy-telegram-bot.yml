@@ -1,0 +1,130 @@
+name: Deploy Telegram Bot
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
+
+# Idempotent Telegram bot deployment
+# Running this multiple times will update the bot without side effects
+# Webhook is automatically re-registered on each deployment
+
+jobs:
+  deploy-bot:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Verify Bot Web App exists
+        run: |
+          echo "Verifying Bot Web App: ${{ vars.APP_NAME_PREFIX }}-bot"
+          if ! az webapp show --name ${{ vars.APP_NAME_PREFIX }}-bot --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} &>/dev/null; then
+            echo "❌ Bot Web App not found."
+            echo ""
+            echo "Please ensure:"
+            echo "  1. 'Deploy Azure Infrastructure' workflow has been run"
+            echo "  2. DEPLOY_BOT variable is set to 'true' in your environment"
+            exit 1
+          fi
+          echo "✅ Bot Web App exists"
+
+      - name: Prepare bot package
+        run: |
+          # Create startup script for bot
+          cat > telegram-bot/startup.sh << 'EOF'
+          #!/bin/bash
+          cd /home/site/wwwroot
+          pip install -r requirements.txt
+          python bot.py
+          EOF
+          chmod +x telegram-bot/startup.sh
+          
+          cd telegram-bot
+          zip -r ../deploy-bot.zip . \
+            -x "*.pyc" \
+            -x "__pycache__/*" \
+            -x "venv/*" \
+            -x ".env"
+
+      - name: Configure Bot Web App Settings (idempotent)
+        run: |
+          az webapp config appsettings set \
+            --name ${{ vars.APP_NAME_PREFIX }}-bot \
+            --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
+            --settings \
+              TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
+              TASKBOARD_API_URL="https://${{ vars.APP_NAME_PREFIX }}-api.azurewebsites.net/api/v1" \
+              WEBHOOK_URL="https://${{ vars.APP_NAME_PREFIX }}-bot.azurewebsites.net" \
+              SCM_DO_BUILD_DURING_DEPLOYMENT="true" \
+            --output none
+          echo "✅ Bot settings configured"
+
+      - name: Configure Bot Startup Command (idempotent)
+        run: |
+          az webapp config set \
+            --name ${{ vars.APP_NAME_PREFIX }}-bot \
+            --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
+            --startup-file "startup.sh" \
+            --output none
+          echo "✅ Startup command configured"
+
+      - name: Deploy Bot to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.APP_NAME_PREFIX }}-bot
+          package: deploy-bot.zip
+
+      - name: Set Telegram Webhook (idempotent)
+        run: |
+          BOT_URL="https://${{ vars.APP_NAME_PREFIX }}-bot.azurewebsites.net"
+          
+          echo "Configuring Telegram webhook..."
+          RESULT=$(curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/setWebhook?url=${BOT_URL}/${{ secrets.TELEGRAM_BOT_TOKEN }}")
+          
+          # Check if webhook was set successfully
+          if echo "$RESULT" | grep -q '"ok":true'; then
+            echo "✅ Webhook configured successfully"
+          else
+            echo "⚠️  Webhook configuration returned: $RESULT"
+          fi
+
+      - name: Verify deployment
+        run: |
+          BOT_URL="https://${{ vars.APP_NAME_PREFIX }}-bot.azurewebsites.net"
+          
+          echo ""
+          echo "═══════════════════════════════════════════════"
+          echo "  TELEGRAM BOT DEPLOYMENT COMPLETE"
+          echo "═══════════════════════════════════════════════"
+          echo ""
+          echo "🤖 Bot URL: $BOT_URL"
+          echo "🔗 API URL: https://${{ vars.APP_NAME_PREFIX }}-api.azurewebsites.net/api/v1"
+          echo ""
+          echo "Webhook Info:"
+          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/getWebhookInfo" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          if data.get('ok'):
+            result = data.get('result', {})
+            print(f\"  URL: {result.get('url', 'Not set')}\")
+            print(f\"  Pending updates: {result.get('pending_update_count', 0)}\")
+            if result.get('last_error_message'):
+              print(f\"  Last error: {result.get('last_error_message')}\")
+          " 2>/dev/null || echo "  (Unable to fetch webhook info)"
+          echo ""
+          echo "═══════════════════════════════════════════════"

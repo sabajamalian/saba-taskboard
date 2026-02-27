@@ -1,0 +1,78 @@
+name: Deploy Azure Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
+
+# Idempotent infrastructure deployment
+# Running this multiple times will create or update resources without duplication
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create Resource Group (idempotent)
+        run: |
+          echo "Creating/verifying resource group: ${{ vars.AZURE_RESOURCE_GROUP }}"
+          az group create \
+            --name ${{ vars.AZURE_RESOURCE_GROUP }} \
+            --location ${{ vars.AZURE_LOCATION }} \
+            --output none
+          echo "✅ Resource group ready"
+
+      - name: Deploy Bicep Infrastructure (idempotent)
+        uses: azure/arm-deploy@v2
+        with:
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: ${{ vars.AZURE_RESOURCE_GROUP }}
+          template: ./deploy/bicep/main.bicep
+          deploymentMode: Incremental
+          parameters: >
+            namePrefix=${{ vars.APP_NAME_PREFIX }}
+            appServiceSku=${{ vars.APP_SERVICE_SKU }}
+            googleClientId=${{ secrets.GOOGLE_CLIENT_ID }}
+            googleClientSecret=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            telegramBotToken=${{ secrets.TELEGRAM_BOT_TOKEN }}
+            deployBot=${{ vars.DEPLOY_BOT }}
+          failOnStdErr: false
+
+      - name: Output deployment URLs
+        run: |
+          echo "🚀 Infrastructure deployed/updated!"
+          echo ""
+          echo "═══════════════════════════════════════════════"
+          echo "  DEPLOYMENT SUMMARY"
+          echo "═══════════════════════════════════════════════"
+          echo ""
+          echo "📦 Resource Group: ${{ vars.AZURE_RESOURCE_GROUP }}"
+          echo "📍 Location: ${{ vars.AZURE_LOCATION }}"
+          echo ""
+          echo "🔗 Backend URL: https://${{ vars.APP_NAME_PREFIX }}-api.azurewebsites.net"
+          echo "🔑 OAuth Callback: https://${{ vars.APP_NAME_PREFIX }}-api.azurewebsites.net/api/v1/auth/callback"
+          if [ "${{ vars.DEPLOY_BOT }}" == "true" ]; then
+            echo "🤖 Bot URL: https://${{ vars.APP_NAME_PREFIX }}-bot.azurewebsites.net"
+          fi
+          echo ""
+          echo "═══════════════════════════════════════════════"
+          echo ""
+          echo "Next steps:"
+          echo "  1. Run 'Deploy Backend Application' workflow"
+          echo "  2. (Optional) Run 'Deploy Telegram Bot' workflow"
