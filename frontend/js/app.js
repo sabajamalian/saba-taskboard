@@ -26,57 +26,136 @@ async function init() {
 
 async function loadSidebarData() {
     try {
-        const [boardsRes, listsRes] = await Promise.all([
-            api.get('/boards'),
-            api.get('/lists')
-        ]);
+        const projectsRes = await api.get('/projects');
         
-        const boards = boardsRes.data.owned || [];
-        const lists = listsRes.data || [];
+        const ownedProjects = projectsRes.data.owned || [];
+        const sharedProjects = projectsRes.data.shared || [];
+        const allProjects = [...ownedProjects, ...sharedProjects];
         
-        renderSidebarBoards(boards);
-        renderSidebarLists(lists);
+        setState({ projects: allProjects });
+        renderSidebarProjects(allProjects);
     } catch (err) {
         console.error('Failed to load sidebar data:', err);
     }
 }
 
-function renderSidebarBoards(boards) {
-    const container = document.getElementById('boards-nav-list');
+function renderSidebarProjects(projects) {
+    const container = document.getElementById('projects-nav-list');
     if (!container) return;
     
-    if (boards.length === 0) {
-        container.innerHTML = `<div class="nav-empty">No boards yet</div>`;
+    if (projects.length === 0) {
+        container.innerHTML = `<div class="nav-empty">No projects yet</div>`;
         return;
     }
     
-    container.innerHTML = boards.map(board => `
-        <a href="#/boards/${board.id}" class="nav-item" data-id="${board.id}" data-type="board">
-            <span class="nav-item-color" style="background: ${getThemeColor(board.color_theme)}"></span>
-            <span class="nav-item-label">${escapeHtml(board.title)}</span>
-        </a>
+    container.innerHTML = projects.map(project => `
+        <div class="nav-project" data-project-id="${project.id}">
+            <div class="nav-project-header">
+                <button class="nav-project-toggle" aria-expanded="false">
+                    <span class="nav-project-icon">▶</span>
+                </button>
+                <a href="#/projects/${project.id}" class="nav-item nav-project-link" data-id="${project.id}" data-type="project">
+                    <span class="nav-item-color" style="background: ${getThemeColor(project.color_theme)}"></span>
+                    <span class="nav-item-label">${escapeHtml(project.name)}</span>
+                </a>
+            </div>
+            <div class="nav-project-contents hidden">
+                <div class="nav-subgroup">
+                    <div class="nav-subgroup-header">
+                        <span>Boards</span>
+                        <button class="nav-add-btn" data-action="add-board" data-project-id="${project.id}">+</button>
+                    </div>
+                    <div class="nav-subgroup-items" data-boards="${project.id}">
+                        <div class="nav-loading">Loading...</div>
+                    </div>
+                </div>
+                <div class="nav-subgroup">
+                    <div class="nav-subgroup-header">
+                        <span>Lists</span>
+                        <button class="nav-add-btn" data-action="add-list" data-project-id="${project.id}">+</button>
+                    </div>
+                    <div class="nav-subgroup-items" data-lists="${project.id}">
+                        <div class="nav-loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     `).join('');
+    
+    // Add toggle listeners
+    container.querySelectorAll('.nav-project-toggle').forEach(toggle => {
+        toggle.addEventListener('click', async (e) => {
+            const projectEl = toggle.closest('.nav-project');
+            const contents = projectEl.querySelector('.nav-project-contents');
+            const icon = toggle.querySelector('.nav-project-icon');
+            const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+            
+            toggle.setAttribute('aria-expanded', !isExpanded);
+            contents.classList.toggle('hidden');
+            icon.textContent = isExpanded ? '▶' : '▼';
+            
+            if (!isExpanded) {
+                const projectId = projectEl.dataset.projectId;
+                await loadProjectContents(projectId);
+            }
+        });
+    });
+    
+    // Add board/list button listeners
+    container.querySelectorAll('.nav-add-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const action = btn.dataset.action;
+            const projectId = btn.dataset.projectId;
+            if (action === 'add-board') {
+                showQuickBoardModal(projectId);
+            } else if (action === 'add-list') {
+                showQuickListModal(projectId);
+            }
+        });
+    });
     
     updateActiveNavItem();
 }
 
-function renderSidebarLists(lists) {
-    const container = document.getElementById('lists-nav-list');
-    if (!container) return;
-    
-    if (lists.length === 0) {
-        container.innerHTML = `<div class="nav-empty">No lists yet</div>`;
-        return;
+async function loadProjectContents(projectId) {
+    try {
+        const projectRes = await api.get(`/projects/${projectId}`);
+        const project = projectRes.data;
+        
+        const boardsContainer = document.querySelector(`[data-boards="${projectId}"]`);
+        const listsContainer = document.querySelector(`[data-lists="${projectId}"]`);
+        
+        if (boardsContainer) {
+            if (project.boards && project.boards.length > 0) {
+                boardsContainer.innerHTML = project.boards.map(board => `
+                    <a href="#/projects/${projectId}/boards/${board.id}" class="nav-item nav-subitem" data-id="${board.id}" data-type="board">
+                        <span class="nav-item-color" style="background: ${getThemeColor(board.color_theme)}"></span>
+                        <span class="nav-item-label">${escapeHtml(board.title)}</span>
+                    </a>
+                `).join('');
+            } else {
+                boardsContainer.innerHTML = `<div class="nav-empty-small">No boards</div>`;
+            }
+        }
+        
+        if (listsContainer) {
+            if (project.lists && project.lists.length > 0) {
+                listsContainer.innerHTML = project.lists.map(list => `
+                    <a href="#/projects/${projectId}/lists/${list.id}" class="nav-item nav-subitem" data-id="${list.id}" data-type="list">
+                        <span class="nav-item-icon">☑️</span>
+                        <span class="nav-item-label">${escapeHtml(list.title)}</span>
+                    </a>
+                `).join('');
+            } else {
+                listsContainer.innerHTML = `<div class="nav-empty-small">No lists</div>`;
+            }
+        }
+        
+        updateActiveNavItem();
+    } catch (err) {
+        console.error('Failed to load project contents:', err);
     }
-    
-    container.innerHTML = lists.map(list => `
-        <a href="#/lists/${list.id}" class="nav-item" data-id="${list.id}" data-type="list">
-            <span class="nav-item-icon">☑️</span>
-            <span class="nav-item-label">${escapeHtml(list.title)}</span>
-        </a>
-    `).join('');
-    
-    updateActiveNavItem();
 }
 
 function getThemeColor(theme) {
@@ -125,7 +204,7 @@ function hideSidebar() {
 }
 
 function updateActiveNavItem() {
-    const hash = window.location.hash || '#/boards';
+    const hash = window.location.hash || '#/projects';
     const items = document.querySelectorAll('.nav-item');
     
     items.forEach(item => {
@@ -136,14 +215,61 @@ function updateActiveNavItem() {
     });
 }
 
-function showQuickBoardModal() {
+function showQuickProjectModal() {
+    showModal({
+        title: 'Create New Project',
+        content: `
+            <form id="quick-project-form">
+                <div class="form-group">
+                    <label class="form-label">Project Name *</label>
+                    <input type="text" name="name" class="form-input" placeholder="e.g., My Project" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-input form-textarea" placeholder="What is this project about?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Color</label>
+                    <div class="color-picker-grid" id="project-color-picker">
+                        <button type="button" class="color-swatch active" data-color="blue" style="background: #6366F1"></button>
+                        <button type="button" class="color-swatch" data-color="green" style="background: #10B981"></button>
+                        <button type="button" class="color-swatch" data-color="purple" style="background: #8B5CF6"></button>
+                        <button type="button" class="color-swatch" data-color="pink" style="background: #EC4899"></button>
+                        <button type="button" class="color-swatch" data-color="yellow" style="background: #F59E0B"></button>
+                        <button type="button" class="color-swatch" data-color="red" style="background: #EF4444"></button>
+                    </div>
+                    <input type="hidden" name="color_theme" value="blue">
+                </div>
+            </form>
+        `,
+        onSubmit: async () => {
+            const form = document.getElementById('quick-project-form');
+            const formData = new FormData(form);
+            
+            const result = await api.post('/projects', {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                color_theme: formData.get('color_theme')
+            });
+            
+            toast.success('Project created');
+            hideModal();
+            await loadSidebarData();
+            window.location.hash = `#/projects/${result.data.id}`;
+        }
+    });
+    
+    setupColorPicker('project-color-picker', 'color_theme');
+}
+
+function showQuickBoardModal(projectId) {
     showModal({
         title: 'Create New Board',
         content: `
             <form id="quick-board-form">
                 <div class="form-group">
                     <label class="form-label">Board Name *</label>
-                    <input type="text" name="title" class="form-input" placeholder="e.g., Project Alpha" required>
+                    <input type="text" name="title" class="form-input" placeholder="e.g., Sprint 1" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Color</label>
@@ -163,22 +289,22 @@ function showQuickBoardModal() {
             const form = document.getElementById('quick-board-form');
             const formData = new FormData(form);
             
-            const result = await api.post('/boards', {
+            const result = await api.post(`/projects/${projectId}/boards`, {
                 title: formData.get('title'),
                 color_theme: formData.get('color_theme')
             });
             
             toast.success('Board created');
             hideModal();
-            await loadSidebarData();
-            window.location.hash = `#/boards/${result.data.id}`;
+            await loadProjectContents(projectId);
+            window.location.hash = `#/projects/${projectId}/boards/${result.data.id}`;
         }
     });
     
     setupColorPicker('board-color-picker', 'color_theme');
 }
 
-function showQuickListModal() {
+function showQuickListModal(projectId) {
     showModal({
         title: 'Create New List',
         content: `
@@ -205,15 +331,15 @@ function showQuickListModal() {
             const form = document.getElementById('quick-list-form');
             const formData = new FormData(form);
             
-            const result = await api.post('/lists', {
+            const result = await api.post(`/projects/${projectId}/lists`, {
                 title: formData.get('title'),
                 color_theme: formData.get('color_theme')
             });
             
             toast.success('List created');
             hideModal();
-            await loadSidebarData();
-            window.location.hash = `#/lists/${result.data.id}`;
+            await loadProjectContents(projectId);
+            window.location.hash = `#/projects/${projectId}/lists/${result.data.id}`;
         }
     });
     
@@ -260,9 +386,8 @@ function setupEventListeners() {
         overlay.classList.remove('active');
     });
     
-    // Sidebar add buttons
-    document.getElementById('add-board-sidebar-btn')?.addEventListener('click', showQuickBoardModal);
-    document.getElementById('add-list-sidebar-btn')?.addEventListener('click', showQuickListModal);
+    // Sidebar add project button
+    document.getElementById('add-project-sidebar-btn')?.addEventListener('click', showQuickProjectModal);
     
     // Close mobile menu on nav item click
     document.addEventListener('click', (e) => {
@@ -280,7 +405,7 @@ function setupEventListeners() {
 }
 
 // Export for use in views
-export { loadSidebarData, setupColorPicker };
+export { loadSidebarData, loadProjectContents, setupColorPicker, getThemeColor, escapeHtml };
 
 // Start the app
 document.addEventListener('DOMContentLoaded', init);

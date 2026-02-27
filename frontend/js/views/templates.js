@@ -7,11 +7,13 @@ export async function renderTemplates(container) {
     container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
     
     try {
-        const [boardTemplates, listTemplates] = await Promise.all([
+        const [projectTemplates, boardTemplates, listTemplates] = await Promise.all([
+            api.get('/templates/projects'),
             api.get('/templates/boards'),
             api.get('/templates/lists')
         ]);
         
+        const projectTpls = projectTemplates.data || [];
         const boardTpls = boardTemplates.data || [];
         const listTpls = listTemplates.data || [];
         
@@ -19,19 +21,31 @@ export async function renderTemplates(container) {
             <div class="page-header">
                 <div>
                     <h2 class="page-title">Templates</h2>
-                    <p class="page-subtitle">Save boards and lists as templates for quick reuse</p>
+                    <p class="page-subtitle">Save projects, boards and lists as templates for quick reuse</p>
                 </div>
             </div>
             
             <div class="templates-section">
                 <div class="templates-header">
+                    <h3 class="templates-title">📁 Project Templates</h3>
+                </div>
+                <div id="project-templates-grid" class="templates-grid">
+                    ${projectTpls.length === 0 ? `
+                        <div class="template-empty">
+                            <p>No project templates yet. Create one from an existing project using "Save as Template".</p>
+                        </div>
+                    ` : projectTpls.map(t => renderProjectTemplateCard(t)).join('')}
+                </div>
+            </div>
+            
+            <div class="templates-section" style="margin-top: 3rem;">
+                <div class="templates-header">
                     <h3 class="templates-title">📋 Board Templates</h3>
-                    <button id="create-board-template-btn" class="btn btn-secondary">+ New Template</button>
                 </div>
                 <div id="board-templates-grid" class="templates-grid">
                     ${boardTpls.length === 0 ? `
                         <div class="template-empty">
-                            <p>No board templates yet. Create one from an existing board or from scratch.</p>
+                            <p>No board templates yet. Create one from an existing board using "Save as Template".</p>
                         </div>
                     ` : boardTpls.map(t => renderBoardTemplateCard(t)).join('')}
                 </div>
@@ -40,12 +54,11 @@ export async function renderTemplates(container) {
             <div class="templates-section" style="margin-top: 3rem;">
                 <div class="templates-header">
                     <h3 class="templates-title">☑️ List Templates</h3>
-                    <button id="create-list-template-btn" class="btn btn-secondary">+ New Template</button>
                 </div>
                 <div id="list-templates-grid" class="templates-grid">
                     ${listTpls.length === 0 ? `
                         <div class="template-empty">
-                            <p>No list templates yet. Create one from an existing list or from scratch.</p>
+                            <p>No list templates yet. Create one from an existing list using "Save as Template".</p>
                         </div>
                     ` : listTpls.map(t => renderListTemplateCard(t)).join('')}
                 </div>
@@ -53,8 +66,9 @@ export async function renderTemplates(container) {
         `;
         
         // Event listeners
-        document.getElementById('create-board-template-btn')?.addEventListener('click', showNewBoardTemplateModal);
-        document.getElementById('create-list-template-btn')?.addEventListener('click', showNewListTemplateModal);
+        document.querySelectorAll('.template-card[data-type="project"]').forEach(card => {
+            card.addEventListener('click', () => showProjectTemplateActions(projectTpls.find(t => t.id === parseInt(card.dataset.id))));
+        });
         
         document.querySelectorAll('.template-card[data-type="board"]').forEach(card => {
             card.addEventListener('click', () => showBoardTemplateActions(boardTpls.find(t => t.id === parseInt(card.dataset.id))));
@@ -68,6 +82,74 @@ export async function renderTemplates(container) {
         container.innerHTML = `<div class="empty-state">Error loading templates: ${err.message}</div>`;
         toast.error('Failed to load templates');
     }
+}
+
+function renderProjectTemplateCard(template) {
+    const boardCount = template.template_data?.board_template_ids?.length || 0;
+    const listCount = template.template_data?.list_template_ids?.length || 0;
+    
+    return `
+        <div class="template-card" data-type="project" data-id="${template.id}">
+            <div class="template-card-header">
+                <span class="template-icon" style="background: ${getThemeColor(template.color_theme)}">📁</span>
+                <h4 class="template-name">${escapeHtml(template.name)}</h4>
+            </div>
+            <p class="template-description">${escapeHtml(template.description || 'No description')}</p>
+            <div class="template-meta">
+                <span>${boardCount} board${boardCount !== 1 ? 's' : ''}</span>
+                <span>•</span>
+                <span>${listCount} list${listCount !== 1 ? 's' : ''}</span>
+            </div>
+        </div>
+    `;
+}
+
+function showProjectTemplateActions(template) {
+    showModal({
+        title: template.name,
+        content: `
+            <div class="template-actions">
+                <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">
+                    ${escapeHtml(template.description || 'Create a new project from this template')}
+                </p>
+                
+                <form id="apply-project-template-form" style="margin-top: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label">New Project Name</label>
+                        <input type="text" name="name" class="form-input" value="${escapeHtml(template.name)}" required>
+                    </div>
+                </form>
+                
+                <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                    <button id="apply-template-btn" class="btn btn-primary" style="flex: 1;">Create Project</button>
+                    <button id="delete-template-btn" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+        `,
+        hideFooter: true
+    });
+    
+    document.getElementById('apply-template-btn')?.addEventListener('click', async () => {
+        const name = document.querySelector('input[name="name"]').value;
+        try {
+            const result = await api.post(`/templates/projects/${template.id}/apply`, { name });
+            toast.success('Project created from template');
+            hideModal();
+            await loadSidebarData();
+            window.location.hash = `#/projects/${result.data.id}`;
+        } catch (err) {
+            toast.error('Failed to create project');
+        }
+    });
+    
+    document.getElementById('delete-template-btn')?.addEventListener('click', async () => {
+        if (confirm('Delete this template?')) {
+            await api.delete(`/templates/projects/${template.id}`);
+            toast.info('Template deleted');
+            hideModal();
+            renderTemplates(document.getElementById('main-content'));
+        }
+    });
 }
 
 function renderBoardTemplateCard(template) {
@@ -107,7 +189,14 @@ function renderListTemplateCard(template) {
     `;
 }
 
-function showBoardTemplateActions(template) {
+async function showBoardTemplateActions(template) {
+    // Fetch projects for selection
+    let projects = [];
+    try {
+        const res = await api.get('/projects');
+        projects = [...(res.data.owned || []), ...(res.data.shared || [])];
+    } catch (e) {}
+    
     showModal({
         title: template.name,
         content: `
@@ -127,13 +216,20 @@ function showBoardTemplateActions(template) {
                 
                 <form id="apply-board-template-form" style="margin-top: 1.5rem;">
                     <div class="form-group">
+                        <label class="form-label">Project *</label>
+                        <select name="project_id" class="form-input" required>
+                            ${projects.length === 0 ? '<option value="">No projects available</option>' :
+                              projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">New Board Name</label>
                         <input type="text" name="title" class="form-input" value="${escapeHtml(template.name)}" required>
                     </div>
                 </form>
                 
                 <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
-                    <button id="apply-template-btn" class="btn btn-primary" style="flex: 1;">Create Board</button>
+                    <button id="apply-template-btn" class="btn btn-primary" style="flex: 1;" ${projects.length === 0 ? 'disabled' : ''}>Create Board</button>
                     <button id="delete-template-btn" class="btn btn-danger">Delete</button>
                 </div>
             </div>
@@ -142,13 +238,14 @@ function showBoardTemplateActions(template) {
     });
     
     document.getElementById('apply-template-btn')?.addEventListener('click', async () => {
+        const projectId = document.querySelector('select[name="project_id"]').value;
         const title = document.querySelector('input[name="title"]').value;
         try {
-            const result = await api.post(`/templates/boards/${template.id}/apply`, { title });
+            const result = await api.post(`/templates/boards/${template.id}/apply/${projectId}`, { title });
             toast.success('Board created from template');
             hideModal();
             await loadSidebarData();
-            window.location.hash = `#/boards/${result.data.id}`;
+            window.location.hash = `#/projects/${projectId}/boards/${result.data.id}`;
         } catch (err) {
             toast.error('Failed to create board');
         }
@@ -164,7 +261,14 @@ function showBoardTemplateActions(template) {
     });
 }
 
-function showListTemplateActions(template) {
+async function showListTemplateActions(template) {
+    // Fetch projects for selection
+    let projects = [];
+    try {
+        const res = await api.get('/projects');
+        projects = [...(res.data.owned || []), ...(res.data.shared || [])];
+    } catch (e) {}
+    
     showModal({
         title: template.name,
         content: `
@@ -185,13 +289,20 @@ function showListTemplateActions(template) {
                 
                 <form id="apply-list-template-form" style="margin-top: 1.5rem;">
                     <div class="form-group">
+                        <label class="form-label">Project *</label>
+                        <select name="project_id" class="form-input" required>
+                            ${projects.length === 0 ? '<option value="">No projects available</option>' :
+                              projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">New List Name</label>
                         <input type="text" name="title" class="form-input" value="${escapeHtml(template.name)}" required>
                     </div>
                 </form>
                 
                 <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
-                    <button id="apply-template-btn" class="btn btn-primary" style="flex: 1;">Create List</button>
+                    <button id="apply-template-btn" class="btn btn-primary" style="flex: 1;" ${projects.length === 0 ? 'disabled' : ''}>Create List</button>
                     <button id="delete-template-btn" class="btn btn-danger">Delete</button>
                 </div>
             </div>
@@ -200,13 +311,14 @@ function showListTemplateActions(template) {
     });
     
     document.getElementById('apply-template-btn')?.addEventListener('click', async () => {
+        const projectId = document.querySelector('select[name="project_id"]').value;
         const title = document.querySelector('input[name="title"]').value;
         try {
-            const result = await api.post(`/templates/lists/${template.id}/apply`, { title });
+            const result = await api.post(`/templates/lists/${template.id}/apply/${projectId}`, { title });
             toast.success('List created from template');
             hideModal();
             await loadSidebarData();
-            window.location.hash = `#/lists/${result.data.id}`;
+            window.location.hash = `#/projects/${projectId}/lists/${result.data.id}`;
         } catch (err) {
             toast.error('Failed to create list');
         }
@@ -220,155 +332,6 @@ function showListTemplateActions(template) {
             renderTemplates(document.getElementById('main-content'));
         }
     });
-}
-
-async function showNewBoardTemplateModal() {
-    // First, get existing boards to offer "from board" option
-    let boards = [];
-    try {
-        const res = await api.get('/boards');
-        boards = res.data.owned || [];
-    } catch (e) {}
-    
-    showModal({
-        title: 'Create Board Template',
-        content: `
-            <form id="new-board-template-form">
-                ${boards.length > 0 ? `
-                    <div class="form-group">
-                        <label class="form-label">Create from existing board (optional)</label>
-                        <select name="from_board" class="form-input">
-                            <option value="">Start from scratch</option>
-                            ${boards.map(b => `<option value="${b.id}">${escapeHtml(b.title)}</option>`).join('')}
-                        </select>
-                    </div>
-                ` : ''}
-                <div class="form-group">
-                    <label class="form-label">Template Name *</label>
-                    <input type="text" name="name" class="form-input" placeholder="e.g., Sprint Board" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Description</label>
-                    <textarea name="description" class="form-input" style="min-height: 60px;" placeholder="Describe this template..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Color</label>
-                    <div class="color-picker-grid" id="template-color-picker">
-                        <button type="button" class="color-swatch active" data-color="blue" style="background: #6366F1"></button>
-                        <button type="button" class="color-swatch" data-color="green" style="background: #10B981"></button>
-                        <button type="button" class="color-swatch" data-color="purple" style="background: #8B5CF6"></button>
-                        <button type="button" class="color-swatch" data-color="pink" style="background: #EC4899"></button>
-                        <button type="button" class="color-swatch" data-color="yellow" style="background: #F59E0B"></button>
-                        <button type="button" class="color-swatch" data-color="red" style="background: #EF4444"></button>
-                    </div>
-                    <input type="hidden" name="color_theme" value="blue">
-                </div>
-            </form>
-        `,
-        onSubmit: async () => {
-            const form = document.getElementById('new-board-template-form');
-            const formData = new FormData(form);
-            const fromBoard = formData.get('from_board');
-            
-            if (fromBoard) {
-                await api.post(`/templates/boards/from-board/${fromBoard}`, {
-                    name: formData.get('name'),
-                    description: formData.get('description')
-                });
-            } else {
-                await api.post('/templates/boards', {
-                    name: formData.get('name'),
-                    description: formData.get('description'),
-                    color_theme: formData.get('color_theme'),
-                    template_data: {
-                        stages: [
-                            { name: 'To Do', position: 0, color: '#6B7280' },
-                            { name: 'In Progress', position: 1, color: '#3B82F6' },
-                            { name: 'Done', position: 2, color: '#10B981' }
-                        ],
-                        tasks: []
-                    }
-                });
-            }
-            
-            toast.success('Template created');
-            hideModal();
-            renderTemplates(document.getElementById('main-content'));
-        }
-    });
-    
-    setupColorPicker('template-color-picker', 'color_theme');
-}
-
-async function showNewListTemplateModal() {
-    // Get existing lists
-    let lists = [];
-    try {
-        const res = await api.get('/lists');
-        lists = res.data || [];
-    } catch (e) {}
-    
-    showModal({
-        title: 'Create List Template',
-        content: `
-            <form id="new-list-template-form">
-                ${lists.length > 0 ? `
-                    <div class="form-group">
-                        <label class="form-label">Create from existing list (optional)</label>
-                        <select name="from_list" class="form-input">
-                            <option value="">Start from scratch</option>
-                            ${lists.map(l => `<option value="${l.id}">${escapeHtml(l.title)}</option>`).join('')}
-                        </select>
-                    </div>
-                ` : ''}
-                <div class="form-group">
-                    <label class="form-label">Template Name *</label>
-                    <input type="text" name="name" class="form-input" placeholder="e.g., Weekly Groceries" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Description</label>
-                    <textarea name="description" class="form-input" style="min-height: 60px;" placeholder="Describe this template..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Color</label>
-                    <div class="color-picker-grid" id="list-template-color-picker">
-                        <button type="button" class="color-swatch active" data-color="blue" style="background: #6366F1"></button>
-                        <button type="button" class="color-swatch" data-color="green" style="background: #10B981"></button>
-                        <button type="button" class="color-swatch" data-color="purple" style="background: #8B5CF6"></button>
-                        <button type="button" class="color-swatch" data-color="pink" style="background: #EC4899"></button>
-                        <button type="button" class="color-swatch" data-color="yellow" style="background: #F59E0B"></button>
-                        <button type="button" class="color-swatch" data-color="red" style="background: #EF4444"></button>
-                    </div>
-                    <input type="hidden" name="color_theme" value="blue">
-                </div>
-            </form>
-        `,
-        onSubmit: async () => {
-            const form = document.getElementById('new-list-template-form');
-            const formData = new FormData(form);
-            const fromList = formData.get('from_list');
-            
-            if (fromList) {
-                await api.post(`/templates/lists/from-list/${fromList}`, {
-                    name: formData.get('name'),
-                    description: formData.get('description')
-                });
-            } else {
-                await api.post('/templates/lists', {
-                    name: formData.get('name'),
-                    description: formData.get('description'),
-                    color_theme: formData.get('color_theme'),
-                    template_data: { items: [] }
-                });
-            }
-            
-            toast.success('Template created');
-            hideModal();
-            renderTemplates(document.getElementById('main-content'));
-        }
-    });
-    
-    setupColorPicker('list-template-color-picker', 'color_theme');
 }
 
 function getThemeColor(theme) {

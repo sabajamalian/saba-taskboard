@@ -11,8 +11,8 @@ bp = Blueprint('tasks', __name__)
 
 @bp.route('/<int:board_id>/tasks', methods=['GET'])
 @login_required
-@require_board_access('view')
-def list_tasks(board_id):
+@require_board_access()
+def list_tasks(project_id, board_id):
     """List tasks (optional: ?stage_id=)"""
     query = Task.query.filter_by(board_id=board_id)
     
@@ -26,8 +26,8 @@ def list_tasks(board_id):
 
 @bp.route('/<int:board_id>/tasks', methods=['POST'])
 @login_required
-@require_board_access('edit')
-def create_task(board_id):
+@require_board_access()
+def create_task(project_id, board_id):
     """Create a new task"""
     data = request.get_json() or {}
     
@@ -70,8 +70,8 @@ def create_task(board_id):
 
 @bp.route('/<int:board_id>/tasks/<int:task_id>', methods=['GET'])
 @login_required
-@require_board_access('view')
-def get_task(board_id, task_id):
+@require_board_access()
+def get_task(project_id, board_id, task_id):
     """Get task details"""
     task = Task.query.filter_by(id=task_id, board_id=board_id).first_or_404()
     return {'data': task.to_dict()}
@@ -79,8 +79,8 @@ def get_task(board_id, task_id):
 
 @bp.route('/<int:board_id>/tasks/<int:task_id>', methods=['PUT'])
 @login_required
-@require_board_access('edit')
-def update_task(board_id, task_id):
+@require_board_access()
+def update_task(project_id, board_id, task_id):
     """Update task"""
     task = Task.query.filter_by(id=task_id, board_id=board_id).first_or_404()
     data = request.get_json() or {}
@@ -102,8 +102,8 @@ def update_task(board_id, task_id):
 
 @bp.route('/<int:board_id>/tasks/<int:task_id>', methods=['DELETE'])
 @login_required
-@require_board_access('edit')
-def delete_task(board_id, task_id):
+@require_board_access()
+def delete_task(project_id, board_id, task_id):
     """Delete task"""
     task = Task.query.filter_by(id=task_id, board_id=board_id).first_or_404()
     db.session.delete(task)
@@ -113,8 +113,8 @@ def delete_task(board_id, task_id):
 
 @bp.route('/<int:board_id>/tasks/<int:task_id>/move', methods=['PUT'])
 @login_required
-@require_board_access('edit')
-def move_task(board_id, task_id):
+@require_board_access()
+def move_task(project_id, board_id, task_id):
     """Move task to different stage"""
     task = Task.query.filter_by(id=task_id, board_id=board_id).first_or_404()
     data = request.get_json() or {}

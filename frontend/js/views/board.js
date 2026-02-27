@@ -2,20 +2,23 @@ import { api } from '../api.js';
 import { setState, getState } from '../state.js';
 import { showModal, hideModal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
-import { loadSidebarData, setupColorPicker } from '../app.js';
+import { loadSidebarData, loadProjectContents, setupColorPicker } from '../app.js';
 
+let currentProjectId = null;
 let currentBoardId = null;
 
 export async function renderBoard(container, params) {
-    const boardId = params.id;
+    const projectId = params.projectId;
+    const boardId = params.boardId;
+    currentProjectId = projectId;
     currentBoardId = boardId;
     
     container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
     
     try {
         const [boardRes, tasksRes] = await Promise.all([
-            api.get(`/boards/${boardId}`),
-            api.get(`/boards/${boardId}/tasks`)
+            api.get(`/projects/${projectId}/boards/${boardId}`),
+            api.get(`/projects/${projectId}/boards/${boardId}/tasks`)
         ]);
         
         const board = boardRes.data;
@@ -27,6 +30,7 @@ export async function renderBoard(container, params) {
         let html = `
             <div class="board-header">
                 <div>
+                    <a href="#/projects/${projectId}" class="breadcrumb">← Back to project</a>
                     <h2 style="margin-bottom: 0.25rem;">${escapeHtml(board.title)}</h2>
                     <p style="font-size: 0.875rem; color: var(--text-secondary);">${escapeHtml(board.description || 'No description')}</p>
                 </div>
@@ -62,18 +66,18 @@ export async function renderBoard(container, params) {
         container.innerHTML = html;
         
         // Event listeners
-        document.getElementById('add-task-btn').addEventListener('click', () => showNewTaskModal(boardId, stages));
-        document.getElementById('edit-board-btn').addEventListener('click', () => showBoardSettingsModal(board));
+        document.getElementById('add-task-btn').addEventListener('click', () => showNewTaskModal(projectId, boardId, stages));
+        document.getElementById('edit-board-btn').addEventListener('click', () => showBoardSettingsModal(projectId, board));
         
         document.querySelectorAll('.task-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 if (card.classList.contains('dragging')) return;
                 const task = tasks.find(t => t.id === parseInt(card.dataset.id));
-                showTaskModal(task, boardId, stages);
+                showTaskModal(task, projectId, boardId, stages);
             });
         });
         
-        setupDragAndDrop(boardId);
+        setupDragAndDrop(projectId, boardId);
         
     } catch (err) {
         container.innerHTML = `<div class="empty-state">Error loading board: ${err.message}</div>`;
@@ -81,7 +85,7 @@ export async function renderBoard(container, params) {
     }
 }
 
-function setupDragAndDrop(boardId) {
+function setupDragAndDrop(projectId, boardId) {
     const taskCards = document.querySelectorAll('.task-card');
     const taskLists = document.querySelectorAll('.task-list');
     
@@ -135,14 +139,14 @@ function setupDragAndDrop(boardId) {
             updateStageCounts();
             
             try {
-                await api.put(`/boards/${boardId}/tasks/${taskId}/move`, { 
+                await api.put(`/projects/${projectId}/boards/${boardId}/tasks/${taskId}/move`, { 
                     stage_id: newStageId 
                 });
                 toast.success('Task moved');
             } catch (err) {
                 // Revert on error
                 toast.error('Failed to move task');
-                renderBoard(document.getElementById('main-content'), { id: boardId });
+                renderBoard(document.getElementById('main-content'), { projectId, boardId });
             }
         });
     });
@@ -236,7 +240,7 @@ function getThemeColor(theme) {
     return colors[theme] || colors.blue;
 }
 
-function showBoardSettingsModal(board) {
+function showBoardSettingsModal(projectId, board) {
     const stages = board.stages || [];
     
     showModal({
@@ -293,7 +297,7 @@ function showBoardSettingsModal(board) {
                 position: i
             }));
             
-            await api.put(`/boards/${board.id}`, {
+            await api.put(`/projects/${projectId}/boards/${board.id}`, {
                 title: formData.get('title'),
                 description: formData.get('description'),
                 color_theme: formData.get('color_theme'),
@@ -302,8 +306,8 @@ function showBoardSettingsModal(board) {
             
             toast.success('Board updated');
             hideModal();
-            await loadSidebarData();
-            renderBoard(document.getElementById('main-content'), { id: board.id });
+            await loadProjectContents(projectId);
+            renderBoard(document.getElementById('main-content'), { projectId, boardId: board.id });
         }
     });
     
@@ -348,11 +352,11 @@ function showBoardSettingsModal(board) {
     // Delete board
     document.getElementById('delete-board-btn').addEventListener('click', async () => {
         if (confirm('Delete this board and all its tasks? This cannot be undone.')) {
-            await api.delete(`/boards/${board.id}`);
+            await api.delete(`/projects/${projectId}/boards/${board.id}`);
             toast.info('Board deleted');
             hideModal();
-            await loadSidebarData();
-            window.location.hash = '#/boards';
+            await loadProjectContents(projectId);
+            window.location.hash = `#/projects/${projectId}`;
         }
     });
     
@@ -372,7 +376,7 @@ function showStageColorPicker(btn) {
     btn.dataset.color = nextColor;
 }
 
-function showNewTaskModal(boardId, stages) {
+function showNewTaskModal(projectId, boardId, stages) {
     showModal({
         title: 'Add Task',
         content: `
@@ -430,7 +434,7 @@ function showNewTaskModal(boardId, stages) {
                 }
             });
             
-            await api.post(`/boards/${boardId}/tasks`, {
+            await api.post(`/projects/${projectId}/boards/${boardId}/tasks`, {
                 title: formData.get('title'),
                 description: formData.get('description'),
                 stage_id: parseInt(formData.get('stage_id')),
@@ -441,7 +445,7 @@ function showNewTaskModal(boardId, stages) {
             
             toast.success('Task created');
             hideModal();
-            renderBoard(document.getElementById('main-content'), { id: boardId });
+            renderBoard(document.getElementById('main-content'), { projectId, boardId });
         }
     });
     
@@ -449,7 +453,7 @@ function showNewTaskModal(boardId, stages) {
     setupCustomFieldsUI();
 }
 
-function showTaskModal(task, boardId, stages) {
+function showTaskModal(task, projectId, boardId, stages) {
     const customFields = task.custom_fields || {};
     const customFieldsHtml = Object.entries(customFields).map(([key, value]) => `
         <div class="custom-field-row">
@@ -518,7 +522,7 @@ function showTaskModal(task, boardId, stages) {
                 }
             });
             
-            await api.put(`/boards/${boardId}/tasks/${task.id}`, {
+            await api.put(`/projects/${projectId}/boards/${boardId}/tasks/${task.id}`, {
                 title: formData.get('title'),
                 description: formData.get('description'),
                 color_theme: formData.get('color_theme'),
@@ -527,12 +531,12 @@ function showTaskModal(task, boardId, stages) {
             });
             
             if (newStageId !== task.stage_id) {
-                await api.put(`/boards/${boardId}/tasks/${task.id}/move`, { stage_id: newStageId });
+                await api.put(`/projects/${projectId}/boards/${boardId}/tasks/${task.id}/move`, { stage_id: newStageId });
             }
             
             toast.success('Task updated');
             hideModal();
-            renderBoard(document.getElementById('main-content'), { id: boardId });
+            renderBoard(document.getElementById('main-content'), { projectId, boardId });
         }
     });
     
@@ -541,10 +545,10 @@ function showTaskModal(task, boardId, stages) {
     
     document.getElementById('delete-task-btn').addEventListener('click', async () => {
         if (confirm('Delete this task?')) {
-            await api.delete(`/boards/${boardId}/tasks/${task.id}`);
+            await api.delete(`/projects/${projectId}/boards/${boardId}/tasks/${task.id}`);
             toast.info('Task deleted');
             hideModal();
-            renderBoard(document.getElementById('main-content'), { id: boardId });
+            renderBoard(document.getElementById('main-content'), { projectId, boardId });
         }
     });
 }

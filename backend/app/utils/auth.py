@@ -45,20 +45,40 @@ def login_required(f):
     return decorated_function
 
 
-def get_board_access(board, user):
-    """Check if user has access to board and what level"""
-    if board.owner_id == user.id:
+def get_project_access(project, user):
+    """Check if user has access to project"""
+    if project.owner_id == user.id:
         return 'owner'
     
-    share = board.shares.filter_by(user_id=user.id).first()
+    share = project.shares.filter_by(user_id=user.id).first()
     if share:
-        return share.permission  # 'view' or 'edit'
+        return 'shared'
     
     return None
 
 
-def require_board_access(permission='view'):
-    """Decorator to require board access"""
+def require_project_access():
+    """Decorator to require project access"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            from app.models.project import Project
+            project_id = kwargs.get('project_id')
+            project = Project.query.get_or_404(project_id)
+            
+            access = get_project_access(project, g.current_user)
+            if not access:
+                return {'error': {'code': 'FORBIDDEN', 'message': 'Access denied'}}, 403
+            
+            g.project = project
+            g.project_access = access
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+def require_board_access():
+    """Decorator to require board access (via project)"""
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -66,15 +86,36 @@ def require_board_access(permission='view'):
             board_id = kwargs.get('board_id')
             board = Board.query.get_or_404(board_id)
             
-            access = get_board_access(board, g.current_user)
+            # Access is determined by project membership
+            access = get_project_access(board.project, g.current_user)
             if not access:
                 return {'error': {'code': 'FORBIDDEN', 'message': 'Access denied'}}, 403
             
-            if permission == 'edit' and access == 'view':
-                return {'error': {'code': 'FORBIDDEN', 'message': 'Edit access required'}}, 403
-            
             g.board = board
-            g.board_access = access
+            g.project = board.project
+            g.project_access = access
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+def require_list_access():
+    """Decorator to require list access (via project)"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            from app.models.list import List
+            list_id = kwargs.get('list_id')
+            list_obj = List.query.get_or_404(list_id)
+            
+            # Access is determined by project membership
+            access = get_project_access(list_obj.project, g.current_user)
+            if not access:
+                return {'error': {'code': 'FORBIDDEN', 'message': 'Access denied'}}, 403
+            
+            g.list = list_obj
+            g.project = list_obj.project
+            g.project_access = access
             return f(*args, **kwargs)
         return decorated_function
     return decorator

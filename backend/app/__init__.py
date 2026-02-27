@@ -22,14 +22,14 @@ def create_app():
     CORS(app, supports_credentials=True)
     db.init_app(app)
     
-    from app.api import auth, boards, stages, tasks, lists, sharing, templates
+    from app.api import auth, projects, boards, stages, tasks, lists, templates
     
     app.register_blueprint(auth.bp, url_prefix='/api/v1/auth')
-    app.register_blueprint(boards.bp, url_prefix='/api/v1/boards')
-    app.register_blueprint(stages.bp, url_prefix='/api/v1/boards')
-    app.register_blueprint(tasks.bp, url_prefix='/api/v1/boards')
-    app.register_blueprint(lists.bp, url_prefix='/api/v1/lists')
-    app.register_blueprint(sharing.bp, url_prefix='/api/v1/boards')
+    app.register_blueprint(projects.bp, url_prefix='/api/v1/projects')
+    app.register_blueprint(boards.bp, url_prefix='/api/v1/projects/<int:project_id>/boards')
+    app.register_blueprint(stages.bp, url_prefix='/api/v1/projects/<int:project_id>/boards')
+    app.register_blueprint(tasks.bp, url_prefix='/api/v1/projects/<int:project_id>/boards')
+    app.register_blueprint(lists.bp, url_prefix='/api/v1/projects/<int:project_id>/lists')
     app.register_blueprint(templates.bp, url_prefix='/api/v1/templates')
     
     # Serve frontend

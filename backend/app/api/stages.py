@@ -8,8 +8,8 @@ bp = Blueprint('stages', __name__)
 
 @bp.route('/<int:board_id>/stages', methods=['GET'])
 @login_required
-@require_board_access('view')
-def list_stages(board_id):
+@require_board_access()
+def list_stages(project_id, board_id):
     """List stages in board"""
     stages = g.board.stages.order_by(Stage.position).all()
     return {'data': [s.to_dict() for s in stages]}
@@ -17,8 +17,8 @@ def list_stages(board_id):
 
 @bp.route('/<int:board_id>/stages', methods=['POST'])
 @login_required
-@require_board_access('edit')
-def create_stage(board_id):
+@require_board_access()
+def create_stage(project_id, board_id):
     """Create a new stage"""
     data = request.get_json() or {}
     
@@ -43,8 +43,8 @@ def create_stage(board_id):
 
 @bp.route('/<int:board_id>/stages/<int:stage_id>', methods=['PUT'])
 @login_required
-@require_board_access('edit')
-def update_stage(board_id, stage_id):
+@require_board_access()
+def update_stage(project_id, board_id, stage_id):
     """Update stage"""
     stage = Stage.query.filter_by(id=stage_id, board_id=board_id).first_or_404()
     data = request.get_json() or {}
@@ -60,8 +60,8 @@ def update_stage(board_id, stage_id):
 
 @bp.route('/<int:board_id>/stages/<int:stage_id>', methods=['DELETE'])
 @login_required
-@require_board_access('edit')
-def delete_stage(board_id, stage_id):
+@require_board_access()
+def delete_stage(project_id, board_id, stage_id):
     """Delete stage"""
     stage = Stage.query.filter_by(id=stage_id, board_id=board_id).first_or_404()
     
@@ -76,8 +76,8 @@ def delete_stage(board_id, stage_id):
 
 @bp.route('/<int:board_id>/stages/<int:stage_id>/reorder', methods=['PUT'])
 @login_required
-@require_board_access('edit')
-def reorder_stage(board_id, stage_id):
+@require_board_access()
+def reorder_stage(project_id, board_id, stage_id):
     """Change stage position"""
     stage = Stage.query.filter_by(id=stage_id, board_id=board_id).first_or_404()
     data = request.get_json() or {}

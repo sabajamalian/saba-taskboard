@@ -6,7 +6,7 @@ class List(db.Model):
     __tablename__ = 'lists'
     
     id = db.Column(db.Integer, primary_key=True)
-    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
     title = db.Column(db.String(255), nullable=False)
     color_theme = db.Column(db.String(50), default='gray')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -18,7 +18,7 @@ class List(db.Model):
     def to_dict(self, include_items=False):
         data = {
             'id': self.id,
-            'owner_id': self.owner_id,
+            'project_id': self.project_id,
             'title': self.title,
             'color_theme': self.color_theme,
             'created_at': self.created_at.isoformat() if self.created_at else None,

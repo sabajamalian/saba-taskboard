@@ -6,7 +6,7 @@ class Board(db.Model):
     __tablename__ = 'boards'
     
     id = db.Column(db.Integer, primary_key=True)
-    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
     color_theme = db.Column(db.String(50), default='blue')
@@ -19,13 +19,11 @@ class Board(db.Model):
                            cascade='all, delete-orphan')
     custom_fields = db.relationship('CustomFieldDefinition', backref='board',
                                    lazy='dynamic', cascade='all, delete-orphan')
-    shares = db.relationship('BoardShare', backref='board', lazy='dynamic',
-                            cascade='all, delete-orphan')
     
     def to_dict(self, include_stages=False):
         data = {
             'id': self.id,
-            'owner_id': self.owner_id,
+            'project_id': self.project_id,
             'title': self.title,
             'description': self.description,
             'color_theme': self.color_theme,

@@ -13,10 +13,9 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, default=datetime.utcnow)
     
-    boards = db.relationship('Board', backref='owner', lazy='dynamic',
-                            foreign_keys='Board.owner_id')
-    lists = db.relationship('List', backref='owner', lazy='dynamic')
-    shared_boards = db.relationship('BoardShare', backref='user', lazy='dynamic')
+    projects = db.relationship('Project', backref='owner', lazy='dynamic',
+                              foreign_keys='Project.owner_id')
+    shared_projects = db.relationship('ProjectShare', backref='user', lazy='dynamic')
     
     def to_dict(self):
         return {

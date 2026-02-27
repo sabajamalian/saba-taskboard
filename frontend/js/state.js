@@ -2,6 +2,8 @@
 let state = {
     user: null,
     isAuthenticated: false,
+    projects: [],
+    currentProject: null,
     boards: [],
     currentBoard: null,
     lists: [],

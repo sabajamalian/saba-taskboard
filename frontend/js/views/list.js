@@ -2,15 +2,16 @@ import { api } from '../api.js';
 import { setState, getState } from '../state.js';
 import { showModal, hideModal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
-import { loadSidebarData } from '../app.js';
+import { loadProjectContents } from '../app.js';
 
 export async function renderList(container, params) {
-    const listId = params.id;
+    const projectId = params.projectId;
+    const listId = params.listId;
     
     container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
     
     try {
-        const response = await api.get(`/lists/${listId}`);
+        const response = await api.get(`/projects/${projectId}/lists/${listId}`);
         const list = response.data;
         setState({ currentList: list });
         
@@ -22,6 +23,7 @@ export async function renderList(container, params) {
         let html = `
             <div class="board-header">
                 <div>
+                    <a href="#/projects/${projectId}" class="breadcrumb">← Back to project</a>
                     <h2 style="margin-bottom: 0.25rem;">${escapeHtml(list.title)}</h2>
                     <p style="font-size: 0.875rem; color: var(--text-secondary);">Checklist</p>
                 </div>
@@ -70,7 +72,7 @@ export async function renderList(container, params) {
                 addInput.disabled = true;
                 addBtn.disabled = true;
                 try {
-                    await api.post(`/lists/${listId}/items`, { content: value });
+                    await api.post(`/projects/${projectId}/lists/${listId}/items`, { content: value });
                     toast.success('Item added');
                     renderList(container, params);
                 } catch (err) {
@@ -100,7 +102,7 @@ export async function renderList(container, params) {
                 text.classList.toggle('checked');
                 
                 try {
-                    await api.put(`/lists/${listId}/items/${itemId}/toggle`);
+                    await api.put(`/projects/${projectId}/lists/${listId}/items/${itemId}/toggle`);
                     // Refresh to update progress bar
                     setTimeout(() => renderList(container, params), 300);
                 } catch (err) {
@@ -115,7 +117,7 @@ export async function renderList(container, params) {
             text.addEventListener('click', () => {
                 const item = text.closest('.checklist-item');
                 const itemId = item.querySelector('.checklist-checkbox').dataset.id;
-                startInlineEdit(item, text, listId, itemId, container, params);
+                startInlineEdit(item, text, projectId, listId, itemId, container, params);
             });
         });
         
@@ -131,7 +133,7 @@ export async function renderList(container, params) {
                 
                 setTimeout(async () => {
                     try {
-                        await api.delete(`/lists/${listId}/items/${itemId}`);
+                        await api.delete(`/projects/${projectId}/lists/${listId}/items/${itemId}`);
                         renderList(container, params);
                     } catch (err) {
                         toast.error('Failed to delete item');
@@ -145,10 +147,10 @@ export async function renderList(container, params) {
         // Delete list
         document.getElementById('delete-list-btn').addEventListener('click', async () => {
             if (confirm('Delete this list and all items?')) {
-                await api.delete(`/lists/${listId}`);
+                await api.delete(`/projects/${projectId}/lists/${listId}`);
                 toast.info('List deleted');
-                await loadSidebarData();
-                window.location.hash = '#/lists';
+                await loadProjectContents(projectId);
+                window.location.hash = `#/projects/${projectId}`;
             }
         });
         
@@ -162,7 +164,7 @@ export async function renderList(container, params) {
     }
 }
 
-function startInlineEdit(item, textEl, listId, itemId, container, params) {
+function startInlineEdit(item, textEl, projectId, listId, itemId, container, params) {
     const currentText = textEl.textContent;
     item.classList.add('editing');
     
@@ -179,7 +181,7 @@ function startInlineEdit(item, textEl, listId, itemId, container, params) {
         const newText = input.value.trim();
         if (newText && newText !== currentText) {
             try {
-                await api.put(`/lists/${listId}/items/${itemId}`, { content: newText });
+                await api.put(`/projects/${projectId}/lists/${listId}/items/${itemId}`, { content: newText });
                 toast.success('Item updated');
             } catch (err) {
                 toast.error('Failed to update item');

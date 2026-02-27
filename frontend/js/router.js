@@ -1,38 +1,40 @@
 import { getState } from './state.js';
 import { renderLogin } from './views/login.js';
-import { renderBoards } from './views/boards.js';
+import { renderProjects } from './views/projects.js';
+import { renderProject } from './views/project.js';
 import { renderBoard } from './views/board.js';
-import { renderLists } from './views/lists.js';
 import { renderList } from './views/list.js';
 import { renderTemplates } from './views/templates.js';
 
 const routes = {
     '/login': { view: renderLogin, public: true },
-    '/boards': { view: renderBoards, public: false },
-    '/boards/:id': { view: renderBoard, public: false },
-    '/lists': { view: renderLists, public: false },
-    '/lists/:id': { view: renderList, public: false },
+    '/projects': { view: renderProjects, public: false },
+    '/projects/:projectId': { view: renderProject, public: false },
+    '/projects/:projectId/boards/:boardId': { view: renderBoard, public: false },
+    '/projects/:projectId/lists/:listId': { view: renderList, public: false },
     '/templates': { view: renderTemplates, public: false }
 };
 
 function parseHash(hash) {
     const path = hash.slice(1) || '/login';
     
-    // Check for parameterized routes
-    for (const [pattern, config] of Object.entries(routes)) {
-        const paramMatch = pattern.match(/:(\w+)/);
-        if (paramMatch) {
-            const regex = new RegExp(`^${pattern.replace(/:(\w+)/, '(\\d+)')}$`);
-            const match = path.match(regex);
-            if (match) {
-                return { 
-                    path: pattern, 
-                    params: { [paramMatch[1]]: match[1] },
-                    config 
-                };
-            }
-        } else if (path === pattern) {
-            return { path, params: {}, config };
+    // Check for parameterized routes (order matters - most specific first)
+    const sortedRoutes = Object.entries(routes).sort((a, b) => b[0].length - a[0].length);
+    
+    for (const [pattern, config] of sortedRoutes) {
+        // Build regex from pattern
+        let regexStr = pattern.replace(/:(\w+)/g, '(\\d+)');
+        const regex = new RegExp(`^${regexStr}$`);
+        const match = path.match(regex);
+        
+        if (match) {
+            // Extract param names
+            const paramNames = [...pattern.matchAll(/:(\w+)/g)].map(m => m[1]);
+            const params = {};
+            paramNames.forEach((name, i) => {
+                params[name] = match[i + 1];
+            });
+            return { path: pattern, params, config };
         }
     }
     
@@ -50,7 +52,7 @@ function handleRoute() {
     }
     
     if (config.public && state.isAuthenticated && path === '/login') {
-        window.location.hash = '#/boards';
+        window.location.hash = '#/projects';
         return;
     }
     
