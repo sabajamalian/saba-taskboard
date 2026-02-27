@@ -54,8 +54,11 @@ jobs:
           mkdir -p backend/static
           cp -r frontend/* backend/static/
           
-          # Create zip (include requirements.txt in root)
+          # Install dependencies into the package (no server-side build needed)
           cd backend
+          pip install -r requirements.txt --target ./site-packages
+          
+          # Create zip with pre-installed dependencies
           zip -r ../deploy-backend.zip . \
             -x "*.pyc" \
             -x "__pycache__/*" \
@@ -91,7 +94,7 @@ jobs:
               GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
               DATABASE_URL="sqlite:////home/data/taskboard.db" \
               FLASK_ENV="production" \
-              SCM_DO_BUILD_DURING_DEPLOYMENT="true" \
+              SCM_DO_BUILD_DURING_DEPLOYMENT="false" \
             --output none
           echo "✅ App settings configured"
 
@@ -100,7 +103,7 @@ jobs:
           az webapp config set \
             --name ${{ vars.APP_NAME_PREFIX }}-api \
             --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
-            --startup-file "gunicorn --bind=0.0.0.0:8000 --timeout 600 --chdir /home/site/wwwroot 'run:app'" \
+            --startup-file "cd /home/site/wwwroot && PYTHONPATH=/home/site/wwwroot/site-packages gunicorn --bind=0.0.0.0:8000 --timeout 600 'run:app'" \
             --output none
           echo "✅ Startup command configured"
 
