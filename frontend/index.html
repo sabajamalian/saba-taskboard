@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskBoard</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <nav id="navbar" class="navbar hidden">
+            <div class="navbar-brand">
+                <h1>📋 TaskBoard</h1>
+            </div>
+            <div class="navbar-menu">
+                <a href="#/boards" class="nav-link">Boards</a>
+                <a href="#/lists" class="nav-link">Lists</a>
+            </div>
+            <div class="navbar-user">
+                <img id="user-avatar" src="" alt="Avatar" class="avatar">
+                <span id="user-name"></span>
+                <button id="logout-btn" class="btn btn-secondary">Logout</button>
+            </div>
+        </nav>
+        
+        <main id="main-content">
+            <!-- Views rendered here -->
+        </main>
+    </div>
+    
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

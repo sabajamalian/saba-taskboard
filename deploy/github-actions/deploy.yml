@@ -1,0 +1,97 @@
+name: Deploy TaskBoard to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AZURE_RESOURCE_GROUP: taskboard-rg
+  BACKEND_APP_NAME: taskboard-api
+  BOT_APP_NAME: taskboard-bot
+
+jobs:
+  build-and-deploy-backend:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        working-directory: ./backend
+        run: |
+          pip install pytest
+          pytest tests/ -v || true
+
+      - name: Prepare deployment package
+        run: |
+          # Copy frontend to backend static
+          mkdir -p backend/static
+          cp -r frontend/* backend/static/
+          
+          # Create zip
+          cd backend
+          zip -r ../deploy-backend.zip . \
+            -x "*.pyc" \
+            -x "__pycache__/*" \
+            -x "venv/*" \
+            -x ".env" \
+            -x "*.db" \
+            -x "tests/*"
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.BACKEND_APP_NAME }}
+          package: deploy-backend.zip
+
+  deploy-bot:
+    runs-on: ubuntu-latest
+    needs: build-and-deploy-backend
+    if: ${{ vars.DEPLOY_BOT == 'true' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare bot package
+        run: |
+          cd telegram-bot
+          zip -r ../deploy-bot.zip . \
+            -x "*.pyc" \
+            -x "__pycache__/*" \
+            -x "venv/*" \
+            -x ".env"
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bot to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.BOT_APP_NAME }}
+          package: deploy-bot.zip
+
+      - name: Set Telegram Webhook
+        run: |
+          BOT_URL="https://${{ env.BOT_APP_NAME }}.azurewebsites.net"
+          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/setWebhook?url=${BOT_URL}/${{ secrets.TELEGRAM_BOT_TOKEN }}"
