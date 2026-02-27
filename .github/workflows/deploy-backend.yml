@@ -9,7 +9,6 @@ on:
         type: choice
         options:
           - production
-          - staging
         default: production
       run_tests:
         description: 'Run tests before deployment'
