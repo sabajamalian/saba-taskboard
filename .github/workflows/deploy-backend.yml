@@ -54,14 +54,16 @@ jobs:
           mkdir -p backend/static
           cp -r frontend/* backend/static/
           
-          # Create startup script for Azure (no leading spaces - heredoc delimiter at column 0)
+          # Create startup script for Azure
           cat > backend/startup.sh << 'STARTUP_EOF'
 #!/bin/bash
+cd /home/site/wwwroot
+pip install -r requirements.txt
 gunicorn --bind=0.0.0.0:8000 --timeout 600 "app:create_app()"
 STARTUP_EOF
           chmod +x backend/startup.sh
           
-          # Create zip
+          # Create zip (include requirements.txt in root)
           cd backend
           zip -r ../deploy-backend.zip . \
             -x "*.pyc" \
@@ -69,7 +71,8 @@ STARTUP_EOF
             -x "venv/*" \
             -x ".env" \
             -x "*.db" \
-            -x "tests/*"
+            -x "tests/*" \
+            -x ".pytest_cache/*"
 
       - name: Login to Azure
         uses: azure/login@v2

@@ -218,9 +218,13 @@ async function showBoardTemplateActions(template) {
                     <div class="form-group">
                         <label class="form-label">Project *</label>
                         <select name="project_id" class="form-input" required>
-                            ${projects.length === 0 ? '<option value="">No projects available</option>' :
-                              projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
+                            <option value="__new__">➕ Create New Project...</option>
+                            ${projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
                         </select>
+                    </div>
+                    <div class="form-group" id="new-project-name-group" style="display: none;">
+                        <label class="form-label">New Project Name</label>
+                        <input type="text" name="new_project_name" class="form-input" placeholder="Enter project name">
                     </div>
                     <div class="form-group">
                         <label class="form-label">New Board Name</label>
@@ -229,7 +233,7 @@ async function showBoardTemplateActions(template) {
                 </form>
                 
                 <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
-                    <button id="apply-template-btn" class="btn btn-primary" style="flex: 1;" ${projects.length === 0 ? 'disabled' : ''}>Create Board</button>
+                    <button id="apply-template-btn" class="btn btn-primary" style="flex: 1;">Create Board</button>
                     <button id="delete-template-btn" class="btn btn-danger">Delete</button>
                 </div>
             </div>
@@ -237,10 +241,33 @@ async function showBoardTemplateActions(template) {
         hideFooter: true
     });
     
+    // Toggle new project name field
+    const projectSelect = document.querySelector('select[name="project_id"]');
+    const newProjectGroup = document.getElementById('new-project-name-group');
+    projectSelect?.addEventListener('change', () => {
+        newProjectGroup.style.display = projectSelect.value === '__new__' ? 'block' : 'none';
+    });
+    // Show by default since __new__ is first option
+    if (projectSelect?.value === '__new__') {
+        newProjectGroup.style.display = 'block';
+    }
+    
     document.getElementById('apply-template-btn')?.addEventListener('click', async () => {
-        const projectId = document.querySelector('select[name="project_id"]').value;
+        let projectId = document.querySelector('select[name="project_id"]').value;
         const title = document.querySelector('input[name="title"]').value;
+        
         try {
+            // Create new project if needed
+            if (projectId === '__new__') {
+                const newProjectName = document.querySelector('input[name="new_project_name"]').value;
+                if (!newProjectName?.trim()) {
+                    toast.error('Please enter a project name');
+                    return;
+                }
+                const projectRes = await api.post('/projects', { name: newProjectName.trim() });
+                projectId = projectRes.data.id;
+            }
+            
             const result = await api.post(`/templates/boards/${template.id}/apply/${projectId}`, { title });
             toast.success('Board created from template');
             hideModal();
@@ -291,9 +318,13 @@ async function showListTemplateActions(template) {
                     <div class="form-group">
                         <label class="form-label">Project *</label>
                         <select name="project_id" class="form-input" required>
-                            ${projects.length === 0 ? '<option value="">No projects available</option>' :
-                              projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
+                            <option value="__new__">➕ Create New Project...</option>
+                            ${projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
                         </select>
+                    </div>
+                    <div class="form-group" id="new-project-name-group-list" style="display: none;">
+                        <label class="form-label">New Project Name</label>
+                        <input type="text" name="new_project_name" class="form-input" placeholder="Enter project name">
                     </div>
                     <div class="form-group">
                         <label class="form-label">New List Name</label>
@@ -302,7 +333,7 @@ async function showListTemplateActions(template) {
                 </form>
                 
                 <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
-                    <button id="apply-template-btn" class="btn btn-primary" style="flex: 1;" ${projects.length === 0 ? 'disabled' : ''}>Create List</button>
+                    <button id="apply-template-btn" class="btn btn-primary" style="flex: 1;">Create List</button>
                     <button id="delete-template-btn" class="btn btn-danger">Delete</button>
                 </div>
             </div>
@@ -310,10 +341,33 @@ async function showListTemplateActions(template) {
         hideFooter: true
     });
     
+    // Toggle new project name field
+    const projectSelect = document.querySelector('select[name="project_id"]');
+    const newProjectGroup = document.getElementById('new-project-name-group-list');
+    projectSelect?.addEventListener('change', () => {
+        newProjectGroup.style.display = projectSelect.value === '__new__' ? 'block' : 'none';
+    });
+    // Show by default since __new__ is first option
+    if (projectSelect?.value === '__new__') {
+        newProjectGroup.style.display = 'block';
+    }
+    
     document.getElementById('apply-template-btn')?.addEventListener('click', async () => {
-        const projectId = document.querySelector('select[name="project_id"]').value;
+        let projectId = document.querySelector('select[name="project_id"]').value;
         const title = document.querySelector('input[name="title"]').value;
+        
         try {
+            // Create new project if needed
+            if (projectId === '__new__') {
+                const newProjectName = document.querySelector('input[name="new_project_name"]').value;
+                if (!newProjectName?.trim()) {
+                    toast.error('Please enter a project name');
+                    return;
+                }
+                const projectRes = await api.post('/projects', { name: newProjectName.trim() });
+                projectId = projectRes.data.id;
+            }
+            
             const result = await api.post(`/templates/lists/${template.id}/apply/${projectId}`, { title });
             toast.success('List created from template');
             hideModal();
