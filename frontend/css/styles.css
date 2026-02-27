@@ -490,3 +490,116 @@ textarea.form-input {
 .theme-yellow { --card-color: #F59E0B; }
 .theme-red { --card-color: #EF4444; }
 .theme-gray { --card-color: #6B7280; }
+
+/* Drag and Drop */
+.task-card {
+    cursor: grab;
+}
+
+.task-card.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.task-list.drag-over {
+    background: rgba(59, 130, 246, 0.1);
+    border: 2px dashed var(--primary);
+    border-radius: var(--radius);
+}
+
+.task-card.drag-preview {
+    transform: rotate(3deg);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    border-left: 4px solid var(--secondary);
+    pointer-events: auto;
+    transform: translateX(120%);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    max-width: 350px;
+}
+
+.toast-visible {
+    transform: translateX(0);
+}
+
+.toast-hiding {
+    transform: translateX(120%);
+    opacity: 0;
+}
+
+.toast-success {
+    border-left-color: var(--success);
+}
+
+.toast-success .toast-icon {
+    color: var(--success);
+}
+
+.toast-error {
+    border-left-color: var(--danger);
+}
+
+.toast-error .toast-icon {
+    color: var(--danger);
+}
+
+.toast-warning {
+    border-left-color: var(--warning);
+}
+
+.toast-warning .toast-icon {
+    color: var(--warning);
+}
+
+.toast-info {
+    border-left-color: var(--primary);
+}
+
+.toast-info .toast-icon {
+    color: var(--primary);
+}
+
+.toast-icon {
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.toast-message {
+    flex: 1;
+    font-size: 0.875rem;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: var(--secondary);
+    padding: 0;
+    line-height: 1;
+}
+
+.toast-close:hover {
+    color: var(--dark);
+}

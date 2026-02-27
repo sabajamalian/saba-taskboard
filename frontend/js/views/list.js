@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { setState, getState } from '../state.js';
 import { showModal, hideModal } from '../components/modal.js';
+import { toast } from '../components/toast.js';
 
 export async function renderList(container, params) {
     const listId = params.id;
@@ -43,6 +44,7 @@ export async function renderList(container, params) {
             const input = document.getElementById('new-item-input');
             if (input.value.trim()) {
                 await api.post(`/lists/${listId}/items`, { content: input.value.trim() });
+                toast.success('Item added');
                 renderList(container, params);
             }
         });
@@ -68,6 +70,7 @@ export async function renderList(container, params) {
         document.getElementById('delete-list-btn').addEventListener('click', async () => {
             if (confirm('Delete this list and all items?')) {
                 await api.delete(`/lists/${listId}`);
+                toast.info('List deleted');
                 window.location.hash = '#/lists';
             }
         });

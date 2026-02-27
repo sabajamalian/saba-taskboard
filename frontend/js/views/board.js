@@ -1,9 +1,13 @@
 import { api } from '../api.js';
 import { setState, getState } from '../state.js';
 import { showModal, hideModal } from '../components/modal.js';
+import { toast } from '../components/toast.js';
+
+let currentBoardId = null;
 
 export async function renderBoard(container, params) {
     const boardId = params.id;
+    currentBoardId = boardId;
     
     container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
     
@@ -55,15 +59,95 @@ export async function renderBoard(container, params) {
         document.getElementById('add-task-btn').addEventListener('click', () => showNewTaskModal(boardId, stages));
         
         document.querySelectorAll('.task-card').forEach(card => {
-            card.addEventListener('click', () => {
+            card.addEventListener('click', (e) => {
+                // Don't open modal if we're dragging
+                if (card.classList.contains('dragging')) return;
                 const task = tasks.find(t => t.id === parseInt(card.dataset.id));
                 showTaskModal(task, boardId, stages);
             });
         });
         
+        // Setup drag and drop
+        setupDragAndDrop(boardId);
+        
     } catch (err) {
         container.innerHTML = `<div class="empty-state">Error loading board: ${err.message}</div>`;
+        toast.error('Failed to load board');
     }
+}
+
+function setupDragAndDrop(boardId) {
+    const taskCards = document.querySelectorAll('.task-card');
+    const taskLists = document.querySelectorAll('.task-list');
+    
+    taskCards.forEach(card => {
+        card.setAttribute('draggable', 'true');
+        
+        card.addEventListener('dragstart', (e) => {
+            card.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', card.dataset.id);
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            // Remove all drag-over classes
+            taskLists.forEach(list => list.classList.remove('drag-over'));
+        });
+    });
+    
+    taskLists.forEach(list => {
+        list.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            list.classList.add('drag-over');
+        });
+        
+        list.addEventListener('dragleave', (e) => {
+            // Only remove if we're leaving the list entirely
+            if (!list.contains(e.relatedTarget)) {
+                list.classList.remove('drag-over');
+            }
+        });
+        
+        list.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            list.classList.remove('drag-over');
+            
+            const taskId = parseInt(e.dataTransfer.getData('text/plain'));
+            const newStageId = parseInt(list.dataset.stageId);
+            const draggedCard = document.querySelector(`.task-card[data-id="${taskId}"]`);
+            
+            if (!draggedCard) return;
+            
+            const oldStageId = parseInt(draggedCard.closest('.task-list').dataset.stageId);
+            
+            // Don't do anything if dropped in same stage
+            if (oldStageId === newStageId) return;
+            
+            // Optimistic UI update
+            list.appendChild(draggedCard);
+            updateStageCounts();
+            
+            try {
+                await api.put(`/boards/${boardId}/tasks/${taskId}/move`, { 
+                    stage_id: newStageId 
+                });
+                toast.success('Task moved');
+            } catch (err) {
+                // Revert on error
+                toast.error('Failed to move task');
+                renderBoard(document.getElementById('main-content'), { id: boardId });
+            }
+        });
+    });
+}
+
+function updateStageCounts() {
+    document.querySelectorAll('.column').forEach(column => {
+        const count = column.querySelectorAll('.task-card').length;
+        column.querySelector('.column-count').textContent = count;
+    });
 }
 
 function renderTaskCard(task) {
@@ -124,6 +208,7 @@ function showNewTaskModal(boardId, stages) {
                 scheduled_start: formData.get('scheduled_start') || null
             });
             
+            toast.success('Task created');
             hideModal();
             renderBoard(document.getElementById('main-content'), { id: boardId });
         }
@@ -178,6 +263,7 @@ function showTaskModal(task, boardId, stages) {
                 await api.put(`/boards/${boardId}/tasks/${task.id}/move`, { stage_id: newStageId });
             }
             
+            toast.success('Task updated');
             hideModal();
             renderBoard(document.getElementById('main-content'), { id: boardId });
         }
@@ -186,6 +272,7 @@ function showTaskModal(task, boardId, stages) {
     document.getElementById('delete-task-btn').addEventListener('click', async () => {
         if (confirm('Delete this task?')) {
             await api.delete(`/boards/${boardId}/tasks/${task.id}`);
+            toast.info('Task deleted');
             hideModal();
             renderBoard(document.getElementById('main-content'), { id: boardId });
         }

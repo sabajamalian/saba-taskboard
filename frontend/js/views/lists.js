@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { setState } from '../state.js';
 import { showModal, hideModal } from '../components/modal.js';
+import { toast } from '../components/toast.js';
 
 export async function renderLists(container) {
     container.innerHTML = `
@@ -92,6 +93,7 @@ function showNewListModal() {
                 color_theme: formData.get('color_theme')
             });
             
+            toast.success('List created');
             hideModal();
             renderLists(document.getElementById('main-content'));
         }

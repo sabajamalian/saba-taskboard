@@ -1,6 +1,7 @@
 import { api } from '../api.js';
 import { setState, getState } from '../state.js';
 import { showModal, hideModal } from '../components/modal.js';
+import { toast } from '../components/toast.js';
 
 export async function renderBoards(container) {
     container.innerHTML = `
@@ -121,6 +122,7 @@ function showNewBoardModal() {
                 color_theme: formData.get('color_theme')
             });
             
+            toast.success('Board created');
             hideModal();
             renderBoards(document.getElementById('main-content'));
         }
