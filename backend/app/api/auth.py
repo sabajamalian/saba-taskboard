@@ -6,6 +6,7 @@ from authlib.integrations.flask_client import OAuth
 from app import db
 from app.models.user import User
 from app.utils.auth import login_required, get_current_user
+from app.services.default_templates import seed_default_templates
 
 bp = Blueprint('auth', __name__)
 
@@ -48,6 +49,9 @@ def dev_login():
         )
         db.session.add(user)
         db.session.commit()
+        
+        # Seed default project templates for new dev user
+        seed_default_templates(user.id)
     
     session['user_id'] = user.id
     return redirect('/#/boards')
@@ -72,6 +76,10 @@ def callback():
             avatar_url=user_info.get('picture')
         )
         db.session.add(user)
+        db.session.commit()
+        
+        # Seed default project templates for new users
+        seed_default_templates(user.id)
     else:
         user.last_login = datetime.utcnow()
         user.name = user_info.get('name', user.name)
