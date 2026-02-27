@@ -6,8 +6,13 @@ import { toast } from '../components/toast.js';
 export async function renderLists(container) {
     container.innerHTML = `
         <div class="page-header">
-            <h2 class="page-title">My Lists</h2>
-            <button id="new-list-btn" class="btn btn-primary">+ New List</button>
+            <div>
+                <h2 class="page-title">My Lists</h2>
+                <p class="page-subtitle">Checklists for shopping, tasks, and more</p>
+            </div>
+            <button id="new-list-btn" class="btn btn-primary">
+                <span>+</span> New List
+            </button>
         </div>
         <div class="loading"><div class="spinner"></div></div>
     `;
@@ -19,27 +24,36 @@ export async function renderLists(container) {
         
         let html = `
             <div class="page-header">
-                <h2 class="page-title">My Lists</h2>
-                <button id="new-list-btn" class="btn btn-primary">+ New List</button>
+                <div>
+                    <h2 class="page-title">My Lists</h2>
+                    <p class="page-subtitle">Checklists for shopping, tasks, and more</p>
+                </div>
+                <button id="new-list-btn" class="btn btn-primary">
+                    <span>+</span> New List
+                </button>
             </div>
         `;
         
         if (lists.length === 0) {
             html += `
                 <div class="empty-state">
-                    <div class="empty-state-icon">📝</div>
-                    <h3>No lists yet</h3>
-                    <p>Create a list for shopping, groceries, or anything else</p>
+                    <div class="empty-state-icon">☑️</div>
+                    <h3 class="empty-state-title">No lists yet</h3>
+                    <p class="empty-state-description">Create a list for shopping, groceries, or anything else you need to track</p>
                 </div>
             `;
         } else {
             html += `<div class="cards-grid">`;
             lists.forEach(list => {
+                const itemCount = list.item_count || 0;
                 html += `
                     <div class="card list-card" data-id="${list.id}">
                         <div class="card-header">
                             <span class="card-title">${escapeHtml(list.title)}</span>
                             <span class="color-badge" style="background-color: ${getThemeColor(list.color_theme)}"></span>
+                        </div>
+                        <div class="card-meta">
+                            <span>☑️ Checklist</span>
                         </div>
                     </div>
                 `;

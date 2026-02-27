@@ -26,10 +26,12 @@ export async function renderBoard(container, params) {
         let html = `
             <div class="board-header">
                 <div>
-                    <a href="#/boards" style="color: var(--secondary); text-decoration: none;">← Back to boards</a>
+                    <a href="#/boards" class="back-link">← Back to boards</a>
                     <h2 style="margin-top: 0.5rem;">${escapeHtml(board.title)}</h2>
                 </div>
-                <button id="add-task-btn" class="btn btn-primary">+ Add Task</button>
+                <button id="add-task-btn" class="btn btn-primary">
+                    <span>+</span> Add Task
+                </button>
             </div>
             <div class="board-columns">
         `;
@@ -40,7 +42,7 @@ export async function renderBoard(container, params) {
                 <div class="column" data-stage-id="${stage.id}">
                     <div class="column-header">
                         <span class="column-title">
-                            <span style="width: 8px; height: 8px; border-radius: 50%; background: ${stage.color}; display: inline-block;"></span>
+                            <span style="background: ${stage.color};"></span>
                             ${escapeHtml(stage.name)}
                         </span>
                         <span class="column-count">${stageTasks.length}</span>

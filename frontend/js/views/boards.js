@@ -6,8 +6,13 @@ import { toast } from '../components/toast.js';
 export async function renderBoards(container) {
     container.innerHTML = `
         <div class="page-header">
-            <h2 class="page-title">My Boards</h2>
-            <button id="new-board-btn" class="btn btn-primary">+ New Board</button>
+            <div>
+                <h2 class="page-title">My Boards</h2>
+                <p class="page-subtitle">Organize your projects with kanban boards</p>
+            </div>
+            <button id="new-board-btn" class="btn btn-primary">
+                <span>+</span> New Board
+            </button>
         </div>
         <div class="loading"><div class="spinner"></div></div>
     `;
@@ -21,8 +26,13 @@ export async function renderBoards(container) {
         
         let html = `
             <div class="page-header">
-                <h2 class="page-title">My Boards</h2>
-                <button id="new-board-btn" class="btn btn-primary">+ New Board</button>
+                <div>
+                    <h2 class="page-title">My Boards</h2>
+                    <p class="page-subtitle">Organize your projects with kanban boards</p>
+                </div>
+                <button id="new-board-btn" class="btn btn-primary">
+                    <span>+</span> New Board
+                </button>
             </div>
         `;
         
@@ -30,8 +40,8 @@ export async function renderBoards(container) {
             html += `
                 <div class="empty-state">
                     <div class="empty-state-icon">📋</div>
-                    <h3>No boards yet</h3>
-                    <p>Create your first board to get started</p>
+                    <h3 class="empty-state-title">No boards yet</h3>
+                    <p class="empty-state-description">Create your first board to start organizing your tasks and projects</p>
                 </div>
             `;
         } else {
@@ -45,7 +55,7 @@ export async function renderBoards(container) {
             
             if (sharedBoards.length > 0) {
                 html += `
-                    <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Shared with me</h3>
+                    <h3 style="margin-top: 2.5rem; margin-bottom: 1.25rem; font-size: 1rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Shared with me</h3>
                     <div class="cards-grid">
                 `;
                 sharedBoards.forEach(board => {
@@ -80,8 +90,11 @@ function renderBoardCard(board, isShared = false) {
                 <span class="card-title">${escapeHtml(board.title)}</span>
                 <span class="color-badge" style="background-color: ${getThemeColor(board.color_theme)}"></span>
             </div>
-            <p class="card-description">${escapeHtml(board.description || '')}</p>
-            ${isShared ? '<span style="font-size: 0.75rem; color: var(--secondary);">Shared</span>' : ''}
+            <p class="card-description">${escapeHtml(board.description || 'No description')}</p>
+            <div class="card-meta">
+                <span>📋 ${board.stages?.length || 3} stages</span>
+                ${isShared ? '<span style="color: var(--primary);">👥 Shared</span>' : ''}
+            </div>
         </div>
     `;
 }

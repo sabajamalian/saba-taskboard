@@ -16,15 +16,15 @@ export async function renderList(container, params) {
         let html = `
             <div class="board-header">
                 <div>
-                    <a href="#/lists" style="color: var(--secondary); text-decoration: none;">← Back to lists</a>
+                    <a href="#/lists" class="back-link">← Back to lists</a>
                     <h2 style="margin-top: 0.5rem;">${escapeHtml(list.title)}</h2>
                 </div>
                 <button id="delete-list-btn" class="btn btn-danger">Delete List</button>
             </div>
             
-            <div class="card" style="max-width: 600px;">
-                <form id="add-item-form" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                    <input type="text" id="new-item-input" class="form-input" placeholder="Add an item..." style="flex: 1;">
+            <div class="list-container" style="max-width: 600px;">
+                <form id="add-item-form" class="add-item-form">
+                    <input type="text" id="new-item-input" class="form-input" placeholder="Add a new item...">
                     <button type="submit" class="btn btn-primary">Add</button>
                 </form>
                 
@@ -32,7 +32,11 @@ export async function renderList(container, params) {
                     ${(list.items || []).map(item => renderListItem(item)).join('')}
                 </ul>
                 
-                ${(list.items || []).length === 0 ? '<p style="color: var(--secondary); text-align: center;">No items yet</p>' : ''}
+                ${(list.items || []).length === 0 ? `
+                    <div class="empty-state" style="padding: 2rem;">
+                        <p style="color: var(--text-tertiary);">No items yet. Add your first item above!</p>
+                    </div>
+                ` : ''}
             </div>
         `;
         

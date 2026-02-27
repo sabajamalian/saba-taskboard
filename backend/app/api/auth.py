@@ -31,6 +31,28 @@ def login():
     return oauth.google.authorize_redirect(redirect_uri)
 
 
+@bp.route('/dev-login')
+def dev_login():
+    """Development-only login bypass - creates a test user"""
+    if not current_app.debug:
+        return jsonify({'error': {'code': 'FORBIDDEN', 'message': 'Dev login only available in debug mode'}}), 403
+    
+    # Create or get dev user
+    user = User.query.filter_by(email='dev@taskboard.local').first()
+    if not user:
+        user = User(
+            google_id='dev-user-local',
+            email='dev@taskboard.local',
+            name='Dev User',
+            avatar_url=None
+        )
+        db.session.add(user)
+        db.session.commit()
+    
+    session['user_id'] = user.id
+    return redirect('/#/boards')
+
+
 @bp.route('/callback')
 def callback():
     """Handle OAuth callback"""

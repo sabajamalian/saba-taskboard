@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -10,7 +10,9 @@ db = SQLAlchemy()
 
 
 def create_app():
-    app = Flask(__name__)
+    # Serve frontend from ../frontend directory
+    frontend_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'frontend')
+    app = Flask(__name__, static_folder=frontend_folder, static_url_path='')
     
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///taskboard.db')
@@ -28,6 +30,11 @@ def create_app():
     app.register_blueprint(tasks.bp, url_prefix='/api/v1/boards')
     app.register_blueprint(lists.bp, url_prefix='/api/v1/lists')
     app.register_blueprint(sharing.bp, url_prefix='/api/v1/boards')
+    
+    # Serve frontend
+    @app.route('/')
+    def serve_frontend():
+        return send_from_directory(app.static_folder, 'index.html')
     
     with app.app_context():
         db.create_all()
