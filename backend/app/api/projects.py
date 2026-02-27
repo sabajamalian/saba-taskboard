@@ -89,6 +89,22 @@ def delete_project(project_id):
     return {'data': {'message': 'Project deleted'}}
 
 
+@bp.route('/<int:project_id>/members', methods=['GET'])
+@login_required
+@require_project_access()
+def list_members(project_id):
+    """List all members of a project (owner + shared users)"""
+    owner = User.query.get(g.project.owner_id)
+    members = [owner.to_dict()] if owner else []
+    
+    shares = g.project.shares.all()
+    for share in shares:
+        if share.user:
+            members.append(share.user.to_dict())
+    
+    return {'data': members}
+
+
 # ============ Project Sharing ============
 
 @bp.route('/<int:project_id>/shares', methods=['GET'])

@@ -4,6 +4,8 @@ import { showModal, hideModal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
 import { loadProjectContents } from '../app.js';
 
+let projectMembers = [];
+
 export async function renderList(container, params) {
     const projectId = params.projectId;
     const listId = params.listId;
@@ -11,8 +13,12 @@ export async function renderList(container, params) {
     container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
     
     try {
-        const response = await api.get(`/projects/${projectId}/lists/${listId}`);
+        const [response, membersRes] = await Promise.all([
+            api.get(`/projects/${projectId}/lists/${listId}`),
+            api.get(`/projects/${projectId}/members`)
+        ]);
         const list = response.data;
+        projectMembers = membersRes.data || [];
         setState({ currentList: list });
         
         const items = list.items || [];
@@ -121,6 +127,16 @@ export async function renderList(container, params) {
             });
         });
         
+        // Assign item buttons
+        document.querySelectorAll('.assign-item-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const itemId = btn.dataset.id;
+                const item = items.find(i => i.id === parseInt(itemId));
+                showAssignItemModal(projectId, listId, item, container, params);
+            });
+        });
+        
         // Delete items
         document.querySelectorAll('.delete-item-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -204,6 +220,12 @@ function startInlineEdit(item, textEl, projectId, listId, itemId, container, par
 }
 
 function renderListItem(item, listId) {
+    const assigneeBadge = item.assignee ? `
+        <span class="item-assignee-badge" title="${escapeHtml(item.assignee.name)}">
+            ${item.assignee.avatar_url ? `<img src="${escapeHtml(item.assignee.avatar_url)}" class="item-assignee-avatar">` : `<span class="item-assignee-initial">${escapeHtml(item.assignee.name.charAt(0))}</span>`}
+        </span>
+    ` : '';
+    
     return `
         <li class="checklist-item" style="transition: all 0.2s ease;">
             <div class="checklist-checkbox-wrapper">
@@ -211,6 +233,9 @@ function renderListItem(item, listId) {
                 <span class="checklist-checkbox-custom"></span>
             </div>
             <span class="checklist-text ${item.is_checked ? 'checked' : ''}">${escapeHtml(item.content)}</span>
+            <button class="assign-item-btn" data-id="${item.id}" title="${item.assignee ? escapeHtml(item.assignee.name) : 'Assign'}">
+                ${assigneeBadge || '👤'}
+            </button>
             <button class="delete-item-btn" data-id="${item.id}" title="Delete item">×</button>
         </li>
     `;
@@ -220,6 +245,36 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function showAssignItemModal(projectId, listId, item, container, params) {
+    showModal({
+        title: 'Assign Item',
+        content: `
+            <form id="assign-item-form">
+                <div class="form-group">
+                    <label class="form-label">Assign To</label>
+                    <select name="assigned_to" class="form-input">
+                        <option value="">Unassigned</option>
+                        ${projectMembers.map(m => `<option value="${m.id}" ${item.assigned_to === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+                    </select>
+                </div>
+            </form>
+        `,
+        onSubmit: async () => {
+            const form = document.getElementById('assign-item-form');
+            const formData = new FormData(form);
+            const assignedTo = formData.get('assigned_to');
+            
+            await api.put(`/projects/${projectId}/lists/${listId}/items/${item.id}`, {
+                assigned_to: assignedTo ? parseInt(assignedTo) : null
+            });
+            
+            toast.success(assignedTo ? 'Item assigned' : 'Assignment removed');
+            hideModal();
+            renderList(container, params);
+        }
+    });
 }
 
 function showSaveAsListTemplateModal(list) {

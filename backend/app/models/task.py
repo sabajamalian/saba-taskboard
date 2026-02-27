@@ -15,8 +15,11 @@ class Task(db.Model):
     color_theme = db.Column(db.String(50))
     custom_fields = db.Column(db.Text, default='{}')  # JSON storage
     position = db.Column(db.Integer, default=0)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    assignee = db.relationship('User', foreign_keys=[assigned_to], lazy='joined')
     
     def get_custom_fields(self):
         """Parse and return custom fields as dict"""
@@ -56,6 +59,8 @@ class Task(db.Model):
             'dynamic_color': self.get_dynamic_color(),
             'custom_fields': self.get_custom_fields(),
             'position': self.position,
+            'assigned_to': self.assigned_to,
+            'assignee': self.assignee.to_dict() if self.assignee else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

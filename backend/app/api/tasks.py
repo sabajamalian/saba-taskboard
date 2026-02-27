@@ -51,6 +51,7 @@ def create_task(project_id, board_id):
         title=data['title'],
         description=data.get('description'),
         color_theme=data.get('color_theme'),
+        assigned_to=data.get('assigned_to'),
         position=max_pos + 1
     )
     
@@ -95,6 +96,8 @@ def update_task(project_id, board_id, task_id):
         task.due_date = datetime.fromisoformat(data['due_date']).date() if data['due_date'] else None
     if 'custom_fields' in data:
         task.set_custom_fields(data['custom_fields'])
+    if 'assigned_to' in data:
+        task.assigned_to = data['assigned_to'] if data['assigned_to'] else None
     
     db.session.commit()
     return {'data': task.to_dict()}

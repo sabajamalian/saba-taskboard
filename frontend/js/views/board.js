@@ -6,6 +6,7 @@ import { loadSidebarData, loadProjectContents, setupColorPicker } from '../app.j
 
 let currentProjectId = null;
 let currentBoardId = null;
+let projectMembers = [];
 
 export async function renderBoard(container, params) {
     const projectId = params.projectId;
@@ -16,13 +17,15 @@ export async function renderBoard(container, params) {
     container.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
     
     try {
-        const [boardRes, tasksRes] = await Promise.all([
+        const [boardRes, tasksRes, membersRes] = await Promise.all([
             api.get(`/projects/${projectId}/boards/${boardId}`),
-            api.get(`/projects/${projectId}/boards/${boardId}/tasks`)
+            api.get(`/projects/${projectId}/boards/${boardId}/tasks`),
+            api.get(`/projects/${projectId}/members`)
         ]);
         
         const board = boardRes.data;
         const tasks = tasksRes.data;
+        projectMembers = membersRes.data || [];
         setState({ currentBoard: board });
         
         const stages = board.stages || [];
@@ -178,6 +181,13 @@ function renderTaskCard(task) {
         `<span class="task-field-badge">${escapeHtml(key)}: ${escapeHtml(String(value))}</span>`
     ).join('');
     
+    const assigneeBadge = task.assignee ? `
+        <span class="task-assignee-badge" title="${escapeHtml(task.assignee.name)}">
+            ${task.assignee.avatar_url ? `<img src="${escapeHtml(task.assignee.avatar_url)}" class="task-assignee-avatar">` : `<span class="task-assignee-initial">${escapeHtml(task.assignee.name.charAt(0))}</span>`}
+            <span class="task-assignee-name">${escapeHtml(task.assignee.name.split(' ')[0])}</span>
+        </span>
+    ` : '';
+    
     return `
         <div class="task-card ${urgencyClass}" data-id="${task.id}" style="border-left-color: ${task.color_theme ? getThemeColor(task.color_theme) : 'var(--primary)'}">
             <div class="task-title">${escapeHtml(task.title)}</div>
@@ -185,6 +195,7 @@ function renderTaskCard(task) {
             ${fieldBadges ? `<div class="task-fields">${fieldBadges}</div>` : ''}
             <div class="task-meta">
                 ${dueBadge}
+                ${assigneeBadge}
             </div>
         </div>
     `;
@@ -410,6 +421,13 @@ function showNewTaskModal(projectId, boardId, stages) {
                     <label class="form-label">Due Date</label>
                     <input type="date" name="due_date" class="form-input">
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Assign To</label>
+                    <select name="assigned_to" class="form-input">
+                        <option value="">Unassigned</option>
+                        ${projectMembers.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('')}
+                    </select>
+                </div>
                 
                 <div class="custom-fields-section">
                     <div class="custom-fields-header">
@@ -440,6 +458,7 @@ function showNewTaskModal(projectId, boardId, stages) {
                 stage_id: parseInt(formData.get('stage_id')),
                 color_theme: formData.get('color_theme'),
                 due_date: formData.get('due_date') || null,
+                assigned_to: formData.get('assigned_to') ? parseInt(formData.get('assigned_to')) : null,
                 custom_fields: Object.keys(customFields).length > 0 ? customFields : null
             });
             
@@ -496,6 +515,13 @@ function showTaskModal(task, projectId, boardId, stages) {
                     <label class="form-label">Due Date</label>
                     <input type="date" name="due_date" class="form-input" value="${task.due_date || ''}">
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Assign To</label>
+                    <select name="assigned_to" class="form-input">
+                        <option value="">Unassigned</option>
+                        ${projectMembers.map(m => `<option value="${m.id}" ${task.assigned_to === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+                    </select>
+                </div>
                 
                 <div class="custom-fields-section">
                     <div class="custom-fields-header">
@@ -527,6 +553,7 @@ function showTaskModal(task, projectId, boardId, stages) {
                 description: formData.get('description'),
                 color_theme: formData.get('color_theme'),
                 due_date: formData.get('due_date') || null,
+                assigned_to: formData.get('assigned_to') ? parseInt(formData.get('assigned_to')) : null,
                 custom_fields: Object.keys(updatedCustomFields).length > 0 ? updatedCustomFields : null
             });
             

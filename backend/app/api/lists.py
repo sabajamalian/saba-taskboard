@@ -101,6 +101,7 @@ def create_item(project_id, list_id):
     item = ListItem(
         list_id=list_id,
         content=data['content'],
+        assigned_to=data.get('assigned_to'),
         position=max_pos + 1
     )
     
@@ -122,6 +123,8 @@ def update_item(project_id, list_id, item_id):
         item.content = data['content']
     if 'is_checked' in data:
         item.is_checked = data['is_checked']
+    if 'assigned_to' in data:
+        item.assigned_to = data['assigned_to'] if data['assigned_to'] else None
     
     db.session.commit()
     return {'data': item.to_dict()}
