@@ -1207,6 +1207,7 @@ select.form-input {
     justify-content: center;
     gap: var(--space-2);
     padding: var(--space-3);
+    margin-top: var(--space-4);
     border: 2px dashed var(--border-color);
     border-radius: var(--radius-md);
     background: transparent;
@@ -1214,6 +1215,7 @@ select.form-input {
     font-size: var(--text-sm);
     cursor: pointer;
     transition: all var(--transition-fast);
+    width: 100%;
 }
 
 .add-stage-btn:hover {

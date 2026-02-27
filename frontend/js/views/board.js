@@ -247,7 +247,8 @@ function showBoardSettingsModal(board) {
                     <button type="button" class="add-stage-btn" id="add-stage-btn">+ Add Stage</button>
                 </div>
             </form>
-            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-light);">
+            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-light); display: flex; flex-direction: column; gap: 0.75rem;">
+                <button id="save-as-template-btn" class="btn btn-secondary" style="width: 100%;">📋 Save as Template</button>
                 <button id="delete-board-btn" class="btn btn-danger" style="width: 100%;">Delete Board</button>
             </div>
         `,
@@ -325,6 +326,12 @@ function showBoardSettingsModal(board) {
             await loadSidebarData();
             window.location.hash = '#/boards';
         }
+    });
+    
+    // Save as template
+    document.getElementById('save-as-template-btn').addEventListener('click', () => {
+        hideModal();
+        showSaveAsBoardTemplateModal(board);
     });
 }
 
@@ -572,4 +579,37 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function showSaveAsBoardTemplateModal(board) {
+    showModal({
+        title: 'Save Board as Template',
+        content: `
+            <form id="save-board-template-form">
+                <div class="form-group">
+                    <label class="form-label">Template Name *</label>
+                    <input type="text" name="name" class="form-input" value="${escapeHtml(board.title)}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-input" style="min-height: 60px;" placeholder="Describe this template...">${escapeHtml(board.description || '')}</textarea>
+                </div>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 1rem;">
+                    This will save the board's stages and tasks as a reusable template.
+                </p>
+            </form>
+        `,
+        onSubmit: async () => {
+            const form = document.getElementById('save-board-template-form');
+            const formData = new FormData(form);
+            
+            await api.post(`/templates/boards/from-board/${board.id}`, {
+                name: formData.get('name'),
+                description: formData.get('description')
+            });
+            
+            toast.success('Board saved as template');
+            hideModal();
+        }
+    });
 }

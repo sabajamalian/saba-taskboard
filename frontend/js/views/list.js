@@ -25,7 +25,10 @@ export async function renderList(container, params) {
                     <h2 style="margin-bottom: 0.25rem;">${escapeHtml(list.title)}</h2>
                     <p style="font-size: 0.875rem; color: var(--text-secondary);">Checklist</p>
                 </div>
-                <button id="delete-list-btn" class="btn btn-danger">Delete List</button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="save-as-template-btn" class="btn btn-secondary">📋 Save as Template</button>
+                    <button id="delete-list-btn" class="btn btn-danger">Delete List</button>
+                </div>
             </div>
             
             <div class="list-container" style="max-width: 600px;">
@@ -149,6 +152,11 @@ export async function renderList(container, params) {
             }
         });
         
+        // Save as template
+        document.getElementById('save-as-template-btn').addEventListener('click', () => {
+            showSaveAsListTemplateModal(list);
+        });
+        
     } catch (err) {
         container.innerHTML = `<div class="empty-state">Error loading list: ${err.message}</div>`;
     }
@@ -210,4 +218,37 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function showSaveAsListTemplateModal(list) {
+    showModal({
+        title: 'Save List as Template',
+        content: `
+            <form id="save-list-template-form">
+                <div class="form-group">
+                    <label class="form-label">Template Name *</label>
+                    <input type="text" name="name" class="form-input" value="${escapeHtml(list.title)}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-input" style="min-height: 60px;" placeholder="Describe this template..."></textarea>
+                </div>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 1rem;">
+                    This will save the list's items as a reusable template. All items will be unchecked when creating a new list from this template.
+                </p>
+            </form>
+        `,
+        onSubmit: async () => {
+            const form = document.getElementById('save-list-template-form');
+            const formData = new FormData(form);
+            
+            await api.post(`/templates/lists/from-list/${list.id}`, {
+                name: formData.get('name'),
+                description: formData.get('description')
+            });
+            
+            toast.success('List saved as template');
+            hideModal();
+        }
+    });
 }
