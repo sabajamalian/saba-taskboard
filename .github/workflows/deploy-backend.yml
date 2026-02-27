@@ -54,13 +54,6 @@ jobs:
           mkdir -p backend/static
           cp -r frontend/* backend/static/
           
-          # Create startup script for Azure
-          echo '#!/bin/bash' > backend/startup.sh
-          echo 'cd /home/site/wwwroot' >> backend/startup.sh
-          echo 'pip install -r requirements.txt' >> backend/startup.sh
-          echo 'gunicorn --bind=0.0.0.0:8000 --timeout 600 "app:create_app()"' >> backend/startup.sh
-          chmod +x backend/startup.sh
-          
           # Create zip (include requirements.txt in root)
           cd backend
           zip -r ../deploy-backend.zip . \
@@ -107,7 +100,7 @@ jobs:
           az webapp config set \
             --name ${{ vars.APP_NAME_PREFIX }}-api \
             --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
-            --startup-file "startup.sh" \
+            --startup-file "gunicorn --bind=0.0.0.0:8000 --timeout 600 'app:create_app()'" \
             --output none
           echo "✅ Startup command configured"
 
