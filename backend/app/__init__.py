@@ -10,9 +10,12 @@ db = SQLAlchemy()
 
 
 def create_app():
-    # Serve frontend from ../frontend directory
-    frontend_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'frontend')
-    app = Flask(__name__, static_folder=frontend_folder, static_url_path='')
+    # Serve frontend: use 'static' folder in production (Azure), '../frontend' in development
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    static_folder = os.path.join(base_dir, 'static')
+    if not os.path.exists(static_folder):
+        static_folder = os.path.join(base_dir, '..', 'frontend')
+    app = Flask(__name__, static_folder=static_folder, static_url_path='')
     
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///taskboard.db')

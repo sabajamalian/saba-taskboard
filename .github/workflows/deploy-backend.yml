@@ -100,7 +100,7 @@ jobs:
           az webapp config set \
             --name ${{ vars.APP_NAME_PREFIX }}-api \
             --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
-            --startup-file "gunicorn --bind=0.0.0.0:8000 --timeout 600 'app:create_app()'" \
+            --startup-file "gunicorn --bind=0.0.0.0:8000 --timeout 600 --chdir /home/site/wwwroot 'run:app'" \
             --output none
           echo "✅ Startup command configured"
 
