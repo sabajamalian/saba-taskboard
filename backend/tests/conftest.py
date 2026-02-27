@@ -64,6 +64,17 @@ def auth_client(client, app, auth_user):
 
 
 @pytest.fixture
+def test_project(auth_client):
+    """Create a project for tests that require one"""
+    import json
+    response = auth_client.post('/api/v1/projects',
+        data=json.dumps({'name': 'Test Project'}),
+        content_type='application/json'
+    )
+    return json.loads(response.data)['data']
+
+
+@pytest.fixture
 def jwt_headers(app, auth_user):
     """Get JWT auth headers for API testing"""
     import jwt as pyjwt
