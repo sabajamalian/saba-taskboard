@@ -22,7 +22,7 @@ def create_app():
     CORS(app, supports_credentials=True)
     db.init_app(app)
     
-    from app.api import auth, boards, stages, tasks, lists, sharing
+    from app.api import auth, boards, stages, tasks, lists, sharing, templates
     
     app.register_blueprint(auth.bp, url_prefix='/api/v1/auth')
     app.register_blueprint(boards.bp, url_prefix='/api/v1/boards')
@@ -30,6 +30,7 @@ def create_app():
     app.register_blueprint(tasks.bp, url_prefix='/api/v1/boards')
     app.register_blueprint(lists.bp, url_prefix='/api/v1/lists')
     app.register_blueprint(sharing.bp, url_prefix='/api/v1/boards')
+    app.register_blueprint(templates.bp, url_prefix='/api/v1/templates')
     
     # Serve frontend
     @app.route('/')

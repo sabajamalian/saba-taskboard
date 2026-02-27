@@ -6,6 +6,7 @@ from app.models.custom_field import CustomFieldDefinition
 from app.models.board_share import BoardShare
 from app.models.list import List
 from app.models.list_item import ListItem
+from app.models.template import BoardTemplate, ListTemplate
 
 __all__ = [
     'User',
@@ -15,5 +16,7 @@ __all__ = [
     'CustomFieldDefinition',
     'BoardShare',
     'List',
-    'ListItem'
+    'ListItem',
+    'BoardTemplate',
+    'ListTemplate'
 ]

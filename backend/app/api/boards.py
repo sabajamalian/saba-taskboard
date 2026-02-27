@@ -2,6 +2,7 @@ from flask import Blueprint, request, g
 from app import db
 from app.models.board import Board
 from app.models.board_share import BoardShare
+from app.models.stage import Stage
 from app.utils.auth import login_required, require_board_access
 
 bp = Blueprint('boards', __name__)
@@ -76,8 +77,41 @@ def update_board(board_id):
     if 'color_theme' in data:
         g.board.color_theme = data['color_theme']
     
+    # Handle stages update
+    if 'stages' in data:
+        incoming_stages = data['stages']
+        existing_stage_ids = {s.id for s in g.board.stages}
+        incoming_ids = set()
+        
+        for stage_data in incoming_stages:
+            stage_id = stage_data.get('id')
+            
+            # New stage (id is None or starts with 'new-')
+            if stage_id is None or (isinstance(stage_id, str) and stage_id.startswith('new-')):
+                stage = Stage(
+                    board_id=board_id,
+                    name=stage_data.get('name', 'New Stage'),
+                    position=stage_data.get('position', 0),
+                    color=stage_data.get('color', '#6B7280')
+                )
+                db.session.add(stage)
+            else:
+                # Existing stage - update it
+                incoming_ids.add(stage_id)
+                stage = Stage.query.filter_by(id=stage_id, board_id=board_id).first()
+                if stage:
+                    stage.name = stage_data.get('name', stage.name)
+                    stage.position = stage_data.get('position', stage.position)
+                    stage.color = stage_data.get('color', stage.color)
+        
+        # Delete stages that were removed (but not if they have tasks)
+        for stage_id in existing_stage_ids - incoming_ids:
+            stage = Stage.query.get(stage_id)
+            if stage and stage.tasks.count() == 0:
+                db.session.delete(stage)
+    
     db.session.commit()
-    return {'data': g.board.to_dict()}
+    return {'data': g.board.to_dict(include_stages=True)}
 
 
 @bp.route('/<int:board_id>', methods=['DELETE'])

@@ -4,13 +4,15 @@ import { renderBoards } from './views/boards.js';
 import { renderBoard } from './views/board.js';
 import { renderLists } from './views/lists.js';
 import { renderList } from './views/list.js';
+import { renderTemplates } from './views/templates.js';
 
 const routes = {
     '/login': { view: renderLogin, public: true },
     '/boards': { view: renderBoards, public: false },
     '/boards/:id': { view: renderBoard, public: false },
     '/lists': { view: renderLists, public: false },
-    '/lists/:id': { view: renderList, public: false }
+    '/lists/:id': { view: renderList, public: false },
+    '/templates': { view: renderTemplates, public: false }
 };
 
 function parseHash(hash) {
