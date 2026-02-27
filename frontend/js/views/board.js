@@ -402,15 +402,9 @@ function showNewTaskModal(boardId, stages) {
                         <input type="hidden" name="color_theme" value="blue">
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Due Date</label>
-                        <input type="date" name="due_date" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Start Date</label>
-                        <input type="date" name="scheduled_start" class="form-input">
-                    </div>
+                <div class="form-group">
+                    <label class="form-label">Due Date</label>
+                    <input type="date" name="due_date" class="form-input">
                 </div>
                 
                 <div class="custom-fields-section">
@@ -442,7 +436,6 @@ function showNewTaskModal(boardId, stages) {
                 stage_id: parseInt(formData.get('stage_id')),
                 color_theme: formData.get('color_theme'),
                 due_date: formData.get('due_date') || null,
-                scheduled_start: formData.get('scheduled_start') || null,
                 custom_fields: Object.keys(customFields).length > 0 ? customFields : null
             });
             
@@ -495,15 +488,9 @@ function showTaskModal(task, boardId, stages) {
                         <input type="hidden" name="color_theme" value="${task.color_theme || 'blue'}">
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Due Date</label>
-                        <input type="date" name="due_date" class="form-input" value="${task.due_date || ''}">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Start Date</label>
-                        <input type="date" name="scheduled_start" class="form-input" value="${task.scheduled_start || ''}">
-                    </div>
+                <div class="form-group">
+                    <label class="form-label">Due Date</label>
+                    <input type="date" name="due_date" class="form-input" value="${task.due_date || ''}">
                 </div>
                 
                 <div class="custom-fields-section">
@@ -536,7 +523,6 @@ function showTaskModal(task, boardId, stages) {
                 description: formData.get('description'),
                 color_theme: formData.get('color_theme'),
                 due_date: formData.get('due_date') || null,
-                scheduled_start: formData.get('scheduled_start') || null,
                 custom_fields: Object.keys(updatedCustomFields).length > 0 ? updatedCustomFields : null
             });
             

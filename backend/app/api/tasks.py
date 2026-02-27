@@ -54,11 +54,9 @@ def create_task(board_id):
         position=max_pos + 1
     )
     
-    # Parse dates
+    # Parse due date
     if data.get('due_date'):
         task.due_date = datetime.fromisoformat(data['due_date']).date()
-    if data.get('scheduled_start'):
-        task.scheduled_start = datetime.fromisoformat(data['scheduled_start']).date()
     
     # Set custom fields
     if data.get('custom_fields'):
@@ -95,8 +93,6 @@ def update_task(board_id, task_id):
         task.color_theme = data['color_theme']
     if 'due_date' in data:
         task.due_date = datetime.fromisoformat(data['due_date']).date() if data['due_date'] else None
-    if 'scheduled_start' in data:
-        task.scheduled_start = datetime.fromisoformat(data['scheduled_start']).date() if data['scheduled_start'] else None
     if 'custom_fields' in data:
         task.set_custom_fields(data['custom_fields'])
     

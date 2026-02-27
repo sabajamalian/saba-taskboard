@@ -12,7 +12,6 @@ class Task(db.Model):
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
     due_date = db.Column(db.Date)
-    scheduled_start = db.Column(db.Date)
     color_theme = db.Column(db.String(50))
     custom_fields = db.Column(db.Text, default='{}')  # JSON storage
     position = db.Column(db.Integer, default=0)
@@ -53,7 +52,6 @@ class Task(db.Model):
             'title': self.title,
             'description': self.description,
             'due_date': self.due_date.isoformat() if self.due_date else None,
-            'scheduled_start': self.scheduled_start.isoformat() if self.scheduled_start else None,
             'color_theme': self.color_theme,
             'dynamic_color': self.get_dynamic_color(),
             'custom_fields': self.get_custom_fields(),

@@ -57,7 +57,6 @@ erDiagram
         string title
         text description
         date due_date
-        date scheduled_start
         string color_theme
         text custom_fields "JSON"
         int position
