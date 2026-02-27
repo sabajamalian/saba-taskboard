@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta
 import jwt
-from flask import Blueprint, redirect, url_for, session, request, jsonify
+from flask import Blueprint, redirect, url_for, session, request, jsonify, current_app
 from authlib.integrations.flask_client import OAuth
 from app import db
 from app.models.user import User
@@ -87,7 +87,7 @@ def generate_token():
     user = get_current_user()
     
     payload = {
-        'sub': user.id,
+        'sub': str(user.id),  # JWT spec requires sub to be a string
         'email': user.email,
         'iat': datetime.utcnow(),
         'exp': datetime.utcnow() + timedelta(days=30)
@@ -95,7 +95,7 @@ def generate_token():
     
     token = jwt.encode(
         payload,
-        os.getenv('JWT_SECRET_KEY', 'jwt-dev-secret'),
+        current_app.config.get('JWT_SECRET_KEY', 'jwt-dev-secret'),
         algorithm='HS256'
     )
     

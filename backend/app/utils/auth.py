@@ -1,7 +1,6 @@
 from functools import wraps
-import os
 import jwt
-from flask import session, request, g
+from flask import session, request, g, current_app
 from app.models.user import User
 
 
@@ -18,10 +17,14 @@ def get_current_user():
         try:
             payload = jwt.decode(
                 token,
-                os.getenv('JWT_SECRET_KEY', 'jwt-dev-secret'),
+                current_app.config.get('JWT_SECRET_KEY', 'jwt-dev-secret'),
                 algorithms=['HS256']
             )
-            return User.query.get(payload.get('sub'))
+            # sub can be string or int depending on how token was created
+            user_id = payload.get('sub')
+            if isinstance(user_id, str):
+                user_id = int(user_id)
+            return User.query.get(user_id)
         except jwt.ExpiredSignatureError:
             return None
         except jwt.InvalidTokenError:

@@ -21,3 +21,11 @@
 5. ✅ SPA with vanilla JavaScript
 6. ✅ Webhook-based Telegram bot as separate service
 **Status:** APPROVED — Implementation may begin.
+
+### 2026-02-27: Testing Strategy
+**By:** Saba (Project Owner)
+**What:** Testing decisions:
+1. ✅ API backend tests only (no frontend tests)
+2. ✅ SQLite in-memory for test database
+3. ✅ GitHub Actions CI/CD workflow
+**Status:** APPROVED
