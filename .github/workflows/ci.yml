@@ -28,11 +28,15 @@ jobs:
 
       - name: Run tests
         working-directory: ./backend
+        env:
+          PYTHONPATH: .
         run: |
           pytest tests/ -v --tb=short
 
       - name: Run tests with coverage
         working-directory: ./backend
+        env:
+          PYTHONPATH: .
         run: |
           pytest tests/ --cov=app --cov-report=term-missing --cov-fail-under=70
 
