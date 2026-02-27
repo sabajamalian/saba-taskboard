@@ -160,9 +160,13 @@ function renderTaskCard(task) {
     const dueClass = getDueClass(task.due_date);
     const dueBadge = task.due_date ? `
         <span class="task-due ${dueClass}">
-            📅 ${formatDate(task.due_date)}
+            ${getDueBadgeText(task.due_date)}
         </span>
     ` : '';
+    
+    // Description preview (first ~50 chars)
+    const descPreview = task.description ? 
+        `<div class="task-desc-preview">${escapeHtml(truncateText(task.description, 60))}</div>` : '';
     
     // Render custom fields
     const customFields = task.custom_fields || {};
@@ -173,6 +177,7 @@ function renderTaskCard(task) {
     return `
         <div class="task-card ${urgencyClass}" data-id="${task.id}" style="border-left-color: ${task.color_theme ? getThemeColor(task.color_theme) : 'var(--primary)'}">
             <div class="task-title">${escapeHtml(task.title)}</div>
+            ${descPreview}
             ${fieldBadges ? `<div class="task-fields">${fieldBadges}</div>` : ''}
             <div class="task-meta">
                 ${dueBadge}
@@ -193,6 +198,29 @@ function getUrgencyClass(dateStr) {
     if (diff <= 3) return 'urgency-high';
     if (diff <= 7) return 'urgency-medium';
     return '';
+}
+
+function getDueBadgeText(dateStr) {
+    if (!dateStr) return '';
+    const due = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+    
+    if (diff < 0) {
+        const overdueDays = Math.abs(diff);
+        return `⚠️ ${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue`;
+    }
+    if (diff === 0) return '🔥 Due today';
+    if (diff === 1) return '⏰ Due tomorrow';
+    if (diff <= 7) return `📅 ${diff} days left`;
+    if (diff <= 14) return `📅 ${Math.ceil(diff / 7)} week${diff > 7 ? 's' : ''} left`;
+    return `📅 ${formatDate(dateStr)}`;
+}
+
+function truncateText(text, maxLength) {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '…';
 }
 
 function getThemeColor(theme) {
