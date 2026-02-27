@@ -182,18 +182,100 @@ body {
 }
 
 .nav-section {
-    margin-bottom: var(--space-6);
+    margin-bottom: var(--space-5);
+}
+
+.nav-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-1);
 }
 
 .nav-section-title {
-    display: block;
     font-size: var(--text-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--text-tertiary);
+}
+
+.nav-add-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: var(--text-base);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.nav-add-btn:hover {
+    background: var(--primary-subtle);
+    color: var(--primary);
+}
+
+.nav-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
     padding: var(--space-2) var(--space-3);
-    margin-bottom: var(--space-2);
+    padding-left: var(--space-4);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+
+.nav-item:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.nav-item.active {
+    background: var(--primary-subtle);
+    color: var(--primary);
+}
+
+.nav-item-color {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.nav-item-icon {
+    font-size: var(--text-sm);
+    width: 16px;
+    text-align: center;
+}
+
+.nav-item-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nav-empty {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    font-style: italic;
 }
 
 .sidebar-link {
@@ -743,12 +825,37 @@ body {
     border-left: 4px solid var(--primary);
     transition: all var(--transition-fast);
     position: relative;
+    overflow: hidden;
+}
+
+/* Deadline-based urgency backgrounds */
+.task-card.urgency-critical {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
+    border-left-color: var(--danger);
+}
+
+.task-card.urgency-high {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.03) 100%);
+    border-left-color: var(--warning);
+}
+
+.task-card.urgency-medium {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.02) 100%);
+    border-left-color: var(--primary);
 }
 
 .task-card:hover {
     background: var(--white);
     box-shadow: var(--shadow-md);
     transform: translateX(2px);
+}
+
+.task-card.urgency-critical:hover {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, var(--white) 100%);
+}
+
+.task-card.urgency-high:hover {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, var(--white) 100%);
 }
 
 .task-card:active {
@@ -781,13 +888,43 @@ body {
 }
 
 .task-due.overdue {
-    background: var(--danger-subtle);
-    color: var(--danger);
+    background: var(--danger);
+    color: var(--white);
+    animation: pulse-danger 2s infinite;
 }
 
 .task-due.soon {
-    background: var(--warning-subtle);
-    color: var(--warning);
+    background: var(--warning);
+    color: var(--white);
+}
+
+.task-due.upcoming {
+    background: var(--primary-subtle);
+    color: var(--primary);
+}
+
+@keyframes pulse-danger {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Custom field badges on tasks */
+.task-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+}
+
+.task-field-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 2px var(--space-2);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    color: var(--text-secondary);
 }
 
 /* Drag and Drop */
@@ -848,6 +985,219 @@ select.form-input {
     background-repeat: no-repeat;
     background-position: right var(--space-4) center;
     padding-right: var(--space-10);
+}
+
+/* ===== Color Picker ===== */
+.color-picker-grid {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+.color-swatch {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    border: 3px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+}
+
+.color-swatch:hover {
+    transform: scale(1.1);
+}
+
+.color-swatch.active {
+    border-color: var(--gray-800);
+    box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--gray-300);
+}
+
+.color-swatch.active::after {
+    content: '✓';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* ===== Form Row (side by side) ===== */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+}
+
+@media (max-width: 480px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===== Inline Edit Input ===== */
+.inline-edit-input {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--primary);
+    border-radius: 0;
+    padding: var(--space-2) 0;
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+    width: 100%;
+}
+
+.inline-edit-input:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* ===== Custom Fields ===== */
+.custom-fields-section {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-light);
+}
+
+.custom-fields-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3);
+}
+
+.custom-fields-title {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.custom-field-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+.custom-field-row .form-input {
+    flex: 1;
+}
+
+.custom-field-label {
+    min-width: 100px;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.custom-field-delete {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.custom-field-delete:hover {
+    background: var(--danger-subtle);
+    color: var(--danger);
+}
+
+/* ===== Stage Editor ===== */
+.stages-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.stage-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+}
+
+.stage-color-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.stage-color-btn:hover {
+    transform: scale(1.1);
+}
+
+.stage-name-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+    padding: var(--space-2);
+}
+
+.stage-name-input:focus {
+    outline: none;
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+}
+
+.stage-delete-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.stage-delete-btn:hover {
+    background: var(--danger-subtle);
+    color: var(--danger);
+}
+
+.add-stage-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.add-stage-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-subtle);
 }
 
 /* ===== Modal ===== */
@@ -957,25 +1307,82 @@ select.form-input {
     display: flex;
     align-items: center;
     gap: var(--space-4);
-    padding: var(--space-4);
+    padding: var(--space-3) var(--space-4);
     border-radius: var(--radius-md);
-    transition: background var(--transition-fast);
+    transition: all var(--transition-fast);
+    border: 1px solid transparent;
+    margin-bottom: var(--space-2);
 }
 
 .checklist-item:hover {
     background: var(--bg-secondary);
+    border-color: var(--border-light);
+}
+
+.checklist-item.editing {
+    background: var(--primary-subtle);
+    border-color: var(--primary);
+}
+
+/* Custom checkbox */
+.checklist-checkbox-wrapper {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
 }
 
 .checklist-checkbox {
-    width: 20px;
-    height: 20px;
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
     cursor: pointer;
-    accent-color: var(--primary);
+    z-index: 1;
+}
+
+.checklist-checkbox-custom {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checklist-checkbox:checked + .checklist-checkbox-custom {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.checklist-checkbox:checked + .checklist-checkbox-custom::after {
+    content: '✓';
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.checklist-checkbox:focus + .checklist-checkbox-custom {
+    box-shadow: 0 0 0 3px var(--primary-subtle);
 }
 
 .checklist-text {
     flex: 1;
     font-size: var(--text-base);
+    cursor: text;
+    padding: var(--space-1) 0;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.checklist-text:hover {
+    background: var(--bg-tertiary);
+    padding: var(--space-1) var(--space-2);
+    margin: 0 calc(-1 * var(--space-2));
 }
 
 .checklist-text.checked {
@@ -983,19 +1390,110 @@ select.form-input {
     color: var(--text-tertiary);
 }
 
+.checklist-edit-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: var(--text-base);
+    font-family: inherit;
+    color: var(--text-primary);
+    padding: var(--space-1) 0;
+    outline: none;
+}
+
 .delete-item-btn {
     opacity: 0;
+    width: 28px;
+    height: 28px;
     background: none;
     border: none;
     color: var(--text-tertiary);
     cursor: pointer;
-    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: var(--text-lg);
     transition: all var(--transition-fast);
+    flex-shrink: 0;
 }
 
 .checklist-item:hover .delete-item-btn {
     opacity: 1;
+}
+
+.delete-item-btn:hover {
+    background: var(--danger-subtle);
+    color: var(--danger);
+}
+
+/* Improved add item form */
+.add-item-form {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 2px dashed var(--border-color);
+    margin-bottom: var(--space-4);
+    transition: all var(--transition-fast);
+}
+
+.add-item-form:focus-within {
+    border-color: var(--primary);
+    border-style: solid;
+    background: var(--primary-subtle);
+}
+
+.add-item-form input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: var(--text-base);
+    padding: var(--space-2);
+    outline: none;
+}
+
+.add-item-form input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.add-item-form .btn {
+    flex-shrink: 0;
+}
+
+/* Progress indicator for lists */
+.list-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+}
+
+.list-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--gray-200);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.list-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--success));
+    border-radius: var(--radius-full);
+    transition: width var(--transition-slow);
+}
+
+.list-progress-text {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 50px;
+    text-align: right;
 }
 
 .delete-item-btn:hover {

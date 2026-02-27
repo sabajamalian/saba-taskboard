@@ -1,1 +1,64 @@
-backend/venv/
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# Environment files and secrets
+.env
+*.env
+.env.*
+!.env.example
+deploy/config.sh
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+eggs/
+*.whl
+pip-log.txt
+pip-delete-this-directory.txt
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Node (if any tooling added later)
+node_modules/
+npm-debug.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Deployment artifacts
+*.zip
+*.tar.gz

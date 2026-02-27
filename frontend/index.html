@@ -24,16 +24,26 @@
             </div>
             
             <nav class="sidebar-nav">
+                <!-- Boards Section -->
                 <div class="nav-section">
-                    <span class="nav-section-title">Workspace</span>
-                    <a href="#/boards" class="sidebar-link" data-page="boards">
-                        <span class="sidebar-icon">📋</span>
-                        <span class="sidebar-label">Boards</span>
-                    </a>
-                    <a href="#/lists" class="sidebar-link" data-page="lists">
-                        <span class="sidebar-icon">☑️</span>
-                        <span class="sidebar-label">Lists</span>
-                    </a>
+                    <div class="nav-section-header">
+                        <span class="nav-section-title">Boards</span>
+                        <button id="add-board-sidebar-btn" class="nav-add-btn" title="New Board">+</button>
+                    </div>
+                    <div id="boards-nav-list" class="nav-items-list">
+                        <!-- Boards loaded dynamically -->
+                    </div>
+                </div>
+                
+                <!-- Lists Section -->
+                <div class="nav-section">
+                    <div class="nav-section-header">
+                        <span class="nav-section-title">Lists</span>
+                        <button id="add-list-sidebar-btn" class="nav-add-btn" title="New List">+</button>
+                    </div>
+                    <div id="lists-nav-list" class="nav-items-list">
+                        <!-- Lists loaded dynamically -->
+                    </div>
                 </div>
             </nav>
             

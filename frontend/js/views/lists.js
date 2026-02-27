@@ -2,6 +2,7 @@ import { api } from '../api.js';
 import { setState } from '../state.js';
 import { showModal, hideModal } from '../components/modal.js';
 import { toast } from '../components/toast.js';
+import { loadSidebarData, setupColorPicker } from '../app.js';
 
 export async function renderLists(container) {
     container.innerHTML = `
@@ -10,66 +11,49 @@ export async function renderLists(container) {
                 <h2 class="page-title">My Lists</h2>
                 <p class="page-subtitle">Checklists for shopping, tasks, and more</p>
             </div>
-            <button id="new-list-btn" class="btn btn-primary">
-                <span>+</span> New List
-            </button>
         </div>
         <div class="loading"><div class="spinner"></div></div>
     `;
     
     try {
         const response = await api.get('/lists');
-        const lists = response.data;
+        const lists = response.data || [];
         setState({ lists });
         
-        let html = `
-            <div class="page-header">
-                <div>
-                    <h2 class="page-title">My Lists</h2>
-                    <p class="page-subtitle">Checklists for shopping, tasks, and more</p>
-                </div>
-                <button id="new-list-btn" class="btn btn-primary">
-                    <span>+</span> New List
-                </button>
-            </div>
-        `;
-        
         if (lists.length === 0) {
-            html += `
+            container.innerHTML = `
+                <div class="page-header">
+                    <div>
+                        <h2 class="page-title">My Lists</h2>
+                        <p class="page-subtitle">Checklists for shopping, tasks, and more</p>
+                    </div>
+                </div>
                 <div class="empty-state">
                     <div class="empty-state-icon">☑️</div>
-                    <h3 class="empty-state-title">No lists yet</h3>
-                    <p class="empty-state-description">Create a list for shopping, groceries, or anything else you need to track</p>
+                    <h3 class="empty-state-title">No Lists Yet</h3>
+                    <p class="empty-state-description">Create a checklist for shopping, groceries, or anything else you need to track</p>
+                    <button id="create-first-list-btn" class="btn btn-primary btn-lg" style="margin-top: 1.5rem;">
+                        <span>+</span> Create Your First List
+                    </button>
                 </div>
             `;
+            
+            document.getElementById('create-first-list-btn')?.addEventListener('click', showNewListModal);
         } else {
-            html += `<div class="cards-grid">`;
-            lists.forEach(list => {
-                const itemCount = list.item_count || 0;
-                html += `
-                    <div class="card list-card" data-id="${list.id}">
-                        <div class="card-header">
-                            <span class="card-title">${escapeHtml(list.title)}</span>
-                            <span class="color-badge" style="background-color: ${getThemeColor(list.color_theme)}"></span>
-                        </div>
-                        <div class="card-meta">
-                            <span>☑️ Checklist</span>
-                        </div>
+            container.innerHTML = `
+                <div class="page-header">
+                    <div>
+                        <h2 class="page-title">My Lists</h2>
+                        <p class="page-subtitle">You have ${lists.length} checklist${lists.length !== 1 ? 's' : ''}</p>
                     </div>
-                `;
-            });
-            html += `</div>`;
+                </div>
+                <div class="empty-state" style="padding-top: 3rem;">
+                    <div class="empty-state-icon">👈</div>
+                    <h3 class="empty-state-title">Select a List</h3>
+                    <p class="empty-state-description">Click on a list in the sidebar to view and manage its items</p>
+                </div>
+            `;
         }
-        
-        container.innerHTML = html;
-        
-        document.getElementById('new-list-btn').addEventListener('click', () => showNewListModal());
-        
-        document.querySelectorAll('.list-card').forEach(card => {
-            card.addEventListener('click', () => {
-                window.location.hash = `#/lists/${card.dataset.id}`;
-            });
-        });
         
     } catch (err) {
         container.innerHTML = `<div class="empty-state">Error loading lists: ${err.message}</div>`;
@@ -82,19 +66,20 @@ function showNewListModal() {
         content: `
             <form id="new-list-form">
                 <div class="form-group">
-                    <label class="form-label">Title *</label>
-                    <input type="text" name="title" class="form-input" required>
+                    <label class="form-label">List Name *</label>
+                    <input type="text" name="title" class="form-input" placeholder="e.g., Shopping List" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Color Theme</label>
-                    <select name="color_theme" class="form-input">
-                        <option value="gray">Gray</option>
-                        <option value="blue">Blue</option>
-                        <option value="green">Green</option>
-                        <option value="purple">Purple</option>
-                        <option value="pink">Pink</option>
-                        <option value="yellow">Yellow</option>
-                    </select>
+                    <label class="form-label">Color</label>
+                    <div class="color-picker-grid" id="new-list-color">
+                        <button type="button" class="color-swatch active" data-color="blue" style="background: #6366F1"></button>
+                        <button type="button" class="color-swatch" data-color="green" style="background: #10B981"></button>
+                        <button type="button" class="color-swatch" data-color="purple" style="background: #8B5CF6"></button>
+                        <button type="button" class="color-swatch" data-color="pink" style="background: #EC4899"></button>
+                        <button type="button" class="color-swatch" data-color="yellow" style="background: #F59E0B"></button>
+                        <button type="button" class="color-swatch" data-color="red" style="background: #EF4444"></button>
+                    </div>
+                    <input type="hidden" name="color_theme" value="blue">
                 </div>
             </form>
         `,
@@ -102,21 +87,24 @@ function showNewListModal() {
             const form = document.getElementById('new-list-form');
             const formData = new FormData(form);
             
-            await api.post('/lists', {
+            const result = await api.post('/lists', {
                 title: formData.get('title'),
                 color_theme: formData.get('color_theme')
             });
             
             toast.success('List created');
             hideModal();
-            renderLists(document.getElementById('main-content'));
+            await loadSidebarData();
+            window.location.hash = `#/lists/${result.data.id}`;
         }
     });
+    
+    setupColorPicker('new-list-color', 'color_theme');
 }
 
 function getThemeColor(theme) {
     const colors = {
-        blue: '#3B82F6',
+        blue: '#6366F1',
         green: '#10B981',
         purple: '#8B5CF6',
         pink: '#EC4899',
@@ -124,7 +112,7 @@ function getThemeColor(theme) {
         red: '#EF4444',
         gray: '#6B7280'
     };
-    return colors[theme] || colors.gray;
+    return colors[theme] || colors.blue;
 }
 
 function escapeHtml(text) {
