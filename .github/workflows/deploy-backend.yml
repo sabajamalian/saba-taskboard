@@ -55,12 +55,10 @@ jobs:
           cp -r frontend/* backend/static/
           
           # Create startup script for Azure
-          cat > backend/startup.sh << 'STARTUP_EOF'
-#!/bin/bash
-cd /home/site/wwwroot
-pip install -r requirements.txt
-gunicorn --bind=0.0.0.0:8000 --timeout 600 "app:create_app()"
-STARTUP_EOF
+          echo '#!/bin/bash' > backend/startup.sh
+          echo 'cd /home/site/wwwroot' >> backend/startup.sh
+          echo 'pip install -r requirements.txt' >> backend/startup.sh
+          echo 'gunicorn --bind=0.0.0.0:8000 --timeout 600 "app:create_app()"' >> backend/startup.sh
           chmod +x backend/startup.sh
           
           # Create zip (include requirements.txt in root)
