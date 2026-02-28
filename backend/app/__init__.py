@@ -27,6 +27,9 @@ def create_app():
     
     from app.api import auth, projects, boards, stages, tasks, lists, templates
     
+    # Initialize OAuth
+    auth.init_oauth(app)
+    
     app.register_blueprint(auth.bp, url_prefix='/api/v1/auth')
     app.register_blueprint(projects.bp, url_prefix='/api/v1/projects')
     app.register_blueprint(boards.bp, url_prefix='/api/v1/projects/<int:project_id>/boards')

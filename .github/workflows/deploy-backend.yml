@@ -54,8 +54,7 @@ jobs:
           mkdir -p backend/static
           cp -r frontend/* backend/static/
           
-          # Create zip WITHOUT pre-built dependencies
-          # Azure will install them on the server to avoid GLIBC mismatches
+          # Create zip - Azure Oryx will install dependencies during deployment
           cd backend
           zip -r ../deploy-backend.zip . \
             -x "*.pyc" \
@@ -107,10 +106,15 @@ jobs:
           echo "✅ Startup command configured"
 
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ vars.APP_NAME_PREFIX }}-api
-          package: deploy-backend.zip
+        run: |
+          # Use az webapp deploy which properly triggers Oryx build
+          az webapp deploy \
+            --name ${{ vars.APP_NAME_PREFIX }}-api \
+            --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
+            --src-path deploy-backend.zip \
+            --type zip \
+            --async true
+          echo "✅ Deployment initiated"
 
       - name: Verify deployment
         run: |
