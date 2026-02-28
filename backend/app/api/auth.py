@@ -28,7 +28,14 @@ def init_oauth(app):
 @bp.route('/login')
 def login():
     """Redirect to Google OAuth"""
-    redirect_uri = request.url_root.rstrip('/') + '/api/v1/auth/callback'
+    # Build redirect URI - use X-Forwarded headers for Azure/proxy environments
+    if request.headers.get('X-Forwarded-Proto') == 'https' or request.is_secure:
+        scheme = 'https'
+    else:
+        scheme = request.scheme
+    
+    host = request.headers.get('X-Forwarded-Host', request.host)
+    redirect_uri = f"{scheme}://{host}/api/v1/auth/callback"
     return oauth.google.authorize_redirect(redirect_uri)
 
 
